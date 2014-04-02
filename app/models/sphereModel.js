@@ -17,3 +17,9 @@ var sphereModel = function(scene, radius, color) {
 };
 
 sphereModel.prototype = new Object3DModel();
+
+sphereModel.prototype.topExtremity = function() {
+	var position = this.mesh.position.clone();
+	position.y += this.radius;
+	return position;
+};

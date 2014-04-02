@@ -5,6 +5,13 @@ var Touch = require('touch');
 
 var thyroidController3 = function(canvas) {
 	this.canvas = canvas;
+	this.drawingCanvas = document.createElement('canvas');
+	this.drawingCanvas.width = this.canvas.width;
+	this.drawingCanvas.height = this.canvas.height;
+	this.drawingCanvas.style.position = 'absolute';
+	this.drawingCanvas.style.left = this.canvas.offsetLeft;
+	this.drawingCanvas.style.top = this.canvas.offsetTop;
+	this.canvas.parentNode.appendChild(this.drawingCanvas);
 	this.renderDepthMap = {};
 	this.spheres = [];
 	this.spheresMesh = [];
@@ -72,10 +79,11 @@ thyroidController3.prototype.initScene = function() {
 		this.addSphere({x: 0.6125,
 										y: 0.7246376811594203,
 										z: 0.5103142076502731}, 0x000000);
+		this.updateAnnotations();
 	}.bind(this));
 
-  var axisHelper = new THREE.AxisHelper(500);
-	this.scene.add(axisHelper);
+  //var axisHelper = new THREE.AxisHelper(500);
+	//this.scene.add(axisHelper);
 };
 
 thyroidController3.prototype.render = function() {
@@ -107,6 +115,10 @@ thyroidController3.prototype.onDragMove = function(e) {
 	this.camera.position.x = Math.sin(angle) * distance;
 	this.camera.position.z = Math.cos(angle) * distance;
 	this.camera.lookAt(this.thyroid.position());
+
+	this.updateAnnotations();
+	
+
 	this.lastPoint = e.point;
 };
 
@@ -150,3 +162,31 @@ thyroidController3.prototype.addSphere = function(ratios, color) {
 	
 	return sphere;
 };
+
+thyroidController3.prototype.updateAnnotations = function() {
+	var projector = new THREE.Projector();
+	var ctx = this.drawingCanvas.getContext("2d");
+	ctx.clearRect(0, 0, this.drawingCanvas.width, this.drawingCanvas.height);
+	for (var i in this.spheres) {
+		var sphere = this.spheres[i];
+		var vector1 = projector.projectVector(sphere.position(), this.camera);
+		console.log(sphere.topExtremity());
+		var vector2 = projector.projectVector(sphere.topExtremity(), this.camera);
+
+		var x1 = Math.round((vector1.x * this.canvas.width / 2)) + (this.canvas.width / 2);
+		var y1 = - Math.round((vector1.y * this.canvas.height / 2)) + (this.canvas.height / 2);
+		var x2 = Math.round((vector2.x * this.canvas.width / 2)) + (this.canvas.width / 2);
+		var y2 = - Math.round((vector2.y * this.canvas.height / 2)) + (this.canvas.height / 2);
+  	//ctx.beginPath();
+  	//ctx.arc(vector.x, vector.y, 5, 0, 2 * Math.PI);
+  	//ctx.fill();
+  	var text = (parseInt(i) + 1).toString();
+  	ctx.beginPath();
+  	ctx.moveTo(x2, y2);
+  	ctx.lineTo(x2 + 20, y2 - 40);
+  	ctx.lineTo(x2 + 60, y2 - 40);
+  	ctx.stroke();
+  	ctx.font = "12pt Helvetica";
+  	ctx.fillText(text, x1 - ctx.measureText(text).width / 2, y1 + 6);
+	}
+}
