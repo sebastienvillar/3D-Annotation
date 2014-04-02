@@ -23,11 +23,14 @@ postProcessor.prototype.evaluate = function(context, locals) {
 };
 environment.registerPostProcessor('application/javascript', postProcessor);
 
-var sendFile = function(filename, res) {
+var sendFile = function(filename, res, contentType) {
   fs.readFile(filename, "binary", function(err, file) {
-    res.writeHead(200);
-    res.write(file, "binary");
-    res.end();
+    if (contentType)
+      res.writeHead(200, {'Content-Type': contentType});
+    else {
+      res.writeHead(200);
+    }
+    res.end(file, "binary");
   });
 };
 
@@ -41,7 +44,19 @@ app.use(function (req, res) {
   }
   else if (req.url == '/') 
     sendFile("../client/index.html", res);
+  else if ((result = req.url.match(/\/images\/(.*)/))) {
+    var path = './app/images/' + result[1];
+    fs.exists(path, function(exists) {
+      if (exists)
+        sendFile(path, res, 'image/png');
+      else {
+        res.writeHead(404);
+        res.end();
+      }
+    });
+  }
   else {
+    console.log('sent');
     res.writeHead(302, {
       'Location': '/'
     });

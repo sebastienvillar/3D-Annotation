@@ -131,12 +131,6 @@ eventListener.prototype.onKeyUp = function(e) {
 eventListener.prototype.startListeners = function() {
 	this.timeoutActive = false;
 	this.touchStarted = true;
-	if (this.onDesktop) {
-		var touch = this.startTouches[0];
-		for (var i = 1; i < this.mouseTouchCount(); i++) {
-			this.startTouches[i] = touch;
-		}
-	}
 	
 	this.tapListener.start(this.startTouches);
 	this.dragListener.start(this.startTouches);
@@ -152,8 +146,10 @@ eventListener.prototype.mouseTouchCount = function() {
 
 eventListener.prototype.mouseTouches = function(e) {
 	var domOffset = this.domOffset();
+
 	var xIn = e.clientX > this.domElement.offsetLeft && e.clientX < this.domElement.offsetLeft + this.domElement.offsetWidth;
 	var yIn = e.clientY > this.domElement.offsetTop && e.clientY < this.domElement.offsetTop + this.domElement.offsetHeight;
+
 	if (!xIn || ! yIn) 
 		return [];
 

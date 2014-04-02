@@ -8,12 +8,19 @@ var thyroidModel = function(scene, callback) {
 
 	// var material2 =  new THREE.MeshNormalMaterial({transparent: true, side: THREE.FrontSide, opacity:0.4});
 	// this.mesh.add(new THREE.Mesh(geometry, material2));
-	var material1 =  new THREE.MeshNormalMaterial({transparent: true, opacity:0.4, color:0xff0000});
+	var material1 =  new THREE.MeshBasicMaterial({transparent: true, opacity:0.3, color:0xff0000, side:THREE.BackSide});
+	var material2 =  new THREE.MeshBasicMaterial({transparent: true, opacity:0.3, color:0xff0000, side:THREE.FrontSide});
 	var loader = new THREE.JSONLoader();
 	loader.load("/app/json/thyroid.json", function(geometry) {
 		this.mesh = new THREE.Mesh(geometry, material1);
+		this.mesh.rotateOnAxis(new THREE.Vector3(0, 1, 0), -0.845);
 		this.mesh.scale.set(1.5, 1.5, 1.5);
-		this.mesh.rotateOnAxis(new THREE.Vector3(0, 1, 0), -0.7);
+		this.mesh.geometry.computeFaceNormals();
+    this.mesh.geometry.computeCentroids();
+		this.mesh.geometry.computeBoundingBox();
+		this.mesh.geometry.computeBoundingSphere();
+		this.mesh.add(new THREE.Mesh(geometry, material2));
+
 		if (callback)
 			callback();
 	}.bind(this));

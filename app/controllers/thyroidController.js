@@ -3,7 +3,8 @@ var PlaneModel = require('planeModel');
 var ThyroidModel = require('thyroidModel');
 var Touch = require('touch');
 
-var thyroidController = function() {
+var thyroidController = function(canvas) {
+	this.canvas = canvas;
 	this.renderDepthMap = {};
 	this.spheres = [];
 	this.spheresMesh = [];
@@ -21,20 +22,15 @@ var thyroidController = function() {
 }
 
 thyroidController.prototype.initScene = function() {
-	this.canvas = document.createElement('canvas');
-	document.body.appendChild(this.canvas);
-	this.canvas.width = this.canvas.clientWidth;
-	this.canvas.height = this.canvas.clientHeight;
-
 	this.renderer = new THREE.WebGLRenderer({canvas: this.canvas});
-	this.renderer.setClearColor(0xffffff, 1);
+	this.renderer.setClearColor(0xdddddd, 1);
 	this.renderer.autoClear = true;
 
 	this.scene = new THREE.Scene();
 
 	this.camera = new THREE.PerspectiveCamera(45, this.canvas.width / this.canvas.height, 1, 2000);
 	this.camera.position.z = 30;
-	//this.camera.position.x = 15;
+	this.camera.position.x = 25;
 	this.camera.position.y = 15;
 	this.camera.lookAt(new THREE.Vector3(0, 0, 0));
 
@@ -58,8 +54,25 @@ thyroidController.prototype.initScene = function() {
 	this.thyroid = new ThyroidModel(this.scene, function() {
 		this.thyroid.setPosition(new THREE.Vector3(0, 0, 0));
 		this.addObject3DToScene(this.thyroid);
-		var sphere = this.addSphere();
-		sphere.setPosition(new THREE.Vector3(7, 0, 0));
+		//var box = this.thyroid.mesh.geometry.boundingBox;
+		box = new THREE.Box3();
+		box.setFromObject(this.thyroid.mesh);
+		//var box = this.thyroid.mesh.geometry.boundingSphere;
+		var material1 =  new THREE.MeshNormalMaterial({transparent: true, side: THREE.BackSide, opacity:0.4});
+		var geometry = new THREE.CubeGeometry(box.max.x - box.min.x,
+																									 box.max.y - box.min.y,
+																									 box.max.z - box.min.z,
+																									 10,
+																									 10,
+																									 10);
+		var cube = new THREE.Mesh(geometry, material1);
+
+		var material2 =  new THREE.MeshNormalMaterial({transparent: true, side: THREE.FrontSide, opacity:0.4});
+		cube.add(new THREE.Mesh(geometry, material2));
+		cube.position.set((box.min.x + box.max.x) / 2,
+											(box.min.y + box.max.y) / 2,
+											(box.min.z + box.max.z) / 2);
+		this.box = box;
 	}.bind(this));
 
   var axisHelper = new THREE.AxisHelper(500);
@@ -200,10 +213,17 @@ thyroidController.prototype.removeObject3DFromScene = function(object) {
 	this.renderDepthMap[renderDepth] = null;
 };
 
-thyroidController.prototype.addSphere = function() {
-	var sphere = new SphereModel(this.scene, 1);
+thyroidController.prototype.addSphere = function(ratios, color) {
+	var sphere = new SphereModel(this.scene, 0.8, color);
 	this.spheres.push(sphere);
 	this.spheresMesh.push(sphere.mesh);
 	this.addObject3DToScene(sphere);
+
+	var x = this.box.min.x + ratios.x * (this.box.max.x - this.box.min.x);
+	var y = this.box.max.y - ratios.y * (this.box.max.y - this.box.min.y);
+	var z = this.box.max.z - ratios.z * (this.box.max.z - this.box.min.z);
+	console.log('%d,%d,%d', x, y ,z);
+
+	sphere.setPosition(new THREE.Vector3(x, y ,z));
 	return sphere;
 };
