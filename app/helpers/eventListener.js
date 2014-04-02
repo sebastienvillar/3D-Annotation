@@ -82,7 +82,8 @@ eventListener.prototype.onTouchEnd = function(e) {
 
 eventListener.prototype.onMouseStart = function(e) {
 	this.startTouches = this.mouseTouches(e);
-	this.startListeners();
+	if (this.startTouches.length > 0)
+		this.startListeners();
 };
 
 eventListener.prototype.onMouseMove = function(e) {
