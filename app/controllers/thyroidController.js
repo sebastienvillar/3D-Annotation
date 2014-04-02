@@ -29,8 +29,8 @@ thyroidController.prototype.initScene = function() {
 	this.scene = new THREE.Scene();
 
 	this.camera = new THREE.PerspectiveCamera(45, this.canvas.width / this.canvas.height, 1, 2000);
-	this.camera.position.z = 30;
-	this.camera.position.x = 25;
+	//this.camera.position.z = 30;
+	this.camera.position.x = -45;
 	this.camera.position.y = 15;
 	this.camera.lookAt(new THREE.Vector3(0, 0, 0));
 
@@ -219,9 +219,9 @@ thyroidController.prototype.addSphere = function(ratios, color) {
 	this.spheresMesh.push(sphere.mesh);
 	this.addObject3DToScene(sphere);
 
-	var x = this.box.min.x + ratios.x * (this.box.max.x - this.box.min.x);
+	var x = this.box.max.x - ratios.x * (this.box.max.x - this.box.min.x);
 	var y = this.box.max.y - ratios.y * (this.box.max.y - this.box.min.y);
-	var z = this.box.max.z - ratios.z * (this.box.max.z - this.box.min.z);
+	var z = this.box.min.z + ratios.z * (this.box.max.z - this.box.min.z);
 	console.log('%d,%d,%d', x, y ,z);
 
 	sphere.setPosition(new THREE.Vector3(x, y ,z));
