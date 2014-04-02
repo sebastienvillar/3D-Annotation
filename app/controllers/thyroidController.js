@@ -222,8 +222,7 @@ thyroidController.prototype.addSphere = function(ratios, color) {
 	var x = this.box.max.x - ratios.x * (this.box.max.x - this.box.min.x);
 	var y = this.box.max.y - ratios.y * (this.box.max.y - this.box.min.y);
 	var z = this.box.min.z + ratios.z * (this.box.max.z - this.box.min.z);
-	console.log('%d,%d,%d', x, y ,z);
-
 	sphere.setPosition(new THREE.Vector3(x, y ,z));
+	
 	return sphere;
 };
