@@ -15,7 +15,7 @@ var thyroidController3 = function(canvas) {
 	this.drawingCanvas.style.top = this.canvas.offsetTop;
 	this.canvas.parentNode.appendChild(this.drawingCanvas);
 	this.renderDepthMap = {};
-	this.spheresInfo = [];
+	this.spheres = [];
 
 	this.initScene();
 	this.startListening();
@@ -68,6 +68,9 @@ thyroidController3.prototype.initScene = function() {
 		this.addSphere({x: 0.525,
 										y: 0.7294685990338164,
 										z: 0.13015710382513662}, 0xff0000);
+		this.addSphere({x: 0.525,
+										y: 0.7294685990338164,
+										z: 0.3015710382513662}, 0x444444);
 		this.addSphere({x: 0.6,
 										y: 0.7391304347826086,
 										z: 0.8532445355191256}, 0x00ff00);
@@ -165,7 +168,7 @@ thyroidController3.prototype.removeObject3DFromScene = function(object) {
 thyroidController3.prototype.addSphere = function(ratios, color) {
 	var sphere = new SphereModel(this.scene, 0.8, color);
 	sphere.color = color;
-	this.spheresInfo.push({'sphere': sphere});
+	this.spheres.push(sphere);
 	this.addObject3DToScene(sphere);
 
 	var x = this.thyroid.boundingBox.max.x - ratios.x * (this.thyroid.boundingBox.max.x - this.thyroid.boundingBox.min.x);
@@ -197,9 +200,9 @@ thyroidController3.prototype.updateAnnotations = function() {
 	corners.push(Helper.screenCoordinateFromVector(projector.projectVector(new THREE.Vector3(box.max.x, box.max.y, box.max.z), this.camera), this.canvas));
 
 	var boundingRect = new Rect(Number.POSITIVE_INFINITY,
-											  	   Number.NEGATIVE_INFINITY,
-									    			 Number.POSITIVE_INFINITY,
-									    			 Number.NEGATIVE_INFINITY);
+											  	    Number.NEGATIVE_INFINITY,
+									    	   	 	Number.POSITIVE_INFINITY,
+									    	 		  Number.NEGATIVE_INFINITY);
 
 	for (var i in corners) {
 		var corner = corners[i];
@@ -218,46 +221,37 @@ thyroidController3.prototype.updateAnnotations = function() {
 	ctx.closePath();
 	ctx.stroke();
 
+	var nearestAvailableCoordinate= function(point) {
+		var angle = boundingRect.angleForPoint(point);
+		var intersection = boundingRect.intersectionForAngle(angle);
+		var center = boundingRect.center();
+		//console.log(intersection);
+		ctx.beginPath();
+		ctx.moveTo(center.x, center.y);
+		ctx.lineTo(intersection.x, intersection.y);
+		ctx.stroke();
+	};
+
 	//Adjust positions
-	var rects = [];
 	var canvasRect = new Rect(0, this.canvas.width, 0, this.canvas.height);
+	var infos = [];
 
-	for (var i in this.spheresInfo) {
-		var sphereInfo = this.spheresInfo[i];
-		sphereInfo.coordinate = Helper.screenCoordinateFromVector(projector.projectVector(sphereInfo.sphere.position(), this.camera), this.canvas);
-	}
+	for (var i in this.spheres) {
+		var sphere = this.spheres[i];
+		var coordinate = Helper.screenCoordinateFromVector(projector.projectVector(sphere.position(), this.camera), this.canvas);
 
-	this.spheresInfo.sort(function(s1, s2) {
-		if (s1.coordinate.y < s2.coordinate.y)
-			return -1
-		return 1;
-	})
+		var center = boundingRect.center();
+		ctx.beginPath();
+		ctx.moveTo(center.x, center.y);
+		ctx.lineTo(coordinate.x, coordinate.y);
+		ctx.stroke();
 
-	for (var i in this.spheresInfo) {
-		var sphereInfo = this.spheresInfo[i];
-		var sphere = sphereInfo.sphere;
-		var coordinate = sphereInfo.coordinate;
-		var lastAnnotationRect = sphereInfo.lastAnnotationRect;
-		var lastSide = sphereInfo.lastSide;
-		var lastOffset = sphereInfo.lastOffset;
+		nearestAvailableCoordinate(coordinate);
+		continue;
 
-		// var leftOffset = coordinate.x - boundingRect.min.x;
-		// var rightOffset = boundingRect.max.x - coordinate.x;
-		// var topOffset = coordinate.y - boundingRect.min.y;
-		// var bottomOffset = boundingRect.max.y - coordinate.y;
-		// var offset = Math.min(leftOffset, rightOffset, topOffset, bottomOffset);
-
-		// var side;
-		// if (offset == leftOffset)
-		// 	side = 'left';
-		// else if (offset == rightOffset)
-		// 	side = 'right';
-		// else if (offset == topOffset)
-		// 	side = 'top';
-		// else
-		// 	side = 'bottom';
 		var width = 150;
-		var height = 160;
+		var height = 100;
+
 		var point = boundingRect.intersectionForPointFromCenter(coordinate);
 		var side = boundingRect.sideOfRect(coordinate);
 		if (side == 'left') {
@@ -266,81 +260,59 @@ thyroidController3.prototype.updateAnnotations = function() {
 		} else if (side == 'right') {
 			point.y -= height / 2;
 		}	else if (side == 'top') {
-			point.y -= height;
+			point.y -= height - 8;
 			point.x -= width / 2;
 		} else {
+			point.y -= 20;
 			point.x -= height / 2;
 		}
 
 		var rect = new Rect(point.x, point.x + width, point.y, point.y + height);
-		console.log(rect);
-		console.log(canvasRect);
-		if (!rect.insideRect(canvasRect))
-			continue;
-		// ctx.beginPath();
-		// ctx.moveTo((boundingRect.max.x - boundingRect.min.x) / 2 + boundingRect.min.x, (boundingRect.max.y - boundingRect.min.y) / 2 + boundingRect.min.y);
-		// ctx.lineTo(boundingRect.max.x, boundingRect.min.y);
-		// ctx.stroke();
+		//if (!rect.insideRect(canvasRect))
+			//continue;
 
-		// ctx.beginPath();
-		// ctx.arc(coordinate.x, coordinate.y, 5, 0, Math.PI * 2);
-		// ctx.fill();
-
-		// if (needRefresh) {
-		// 	var rectWidth = 150;
-		// 	var rectHeight = 160;
-
-
-		// 	if (offset == leftOffset) {
-		// 		var rect = new Rect(boundingRect.min.x - rectWidth,
-		// 									  		boundingRect.min.x,
-		// 												coordinate.y - rectHeight / 2,
-		// 												coordinate.y + rectHeight / 2);
-		// 	} else if (offset == rightOffset) {
-		// 		var rect = new Rect(boundingRect.max.x,
-		// 									  		boundingRect.max.x + rectWidth,
-		// 												coordinate.y - rectHeight / 2,
-		// 												coordinate.y + rectHeight / 2);
-		// 	} else if (offset == topOffset) {
-		// 		var rect = new Rect(coordinate.x - rectWidth / 2,
-		// 									  		coordinate.x + rectWidth / 2,
-		// 												boundingRect.min.y - rectHeight,
-		// 												boundingRect.min.y);
-		// 	} else {
-		// 		var rect = new Rect(coordinate.x - rectWidth / 2,
-		// 									  		coordinate.x + rectWidth / 2,
-		// 												boundingRect.max.y,
-		// 												boundingRect.max.y + rectHeight);
-		// 	}
-
-		// 	sphereInfo.lastOffset = offset;
-		// 	sphereInfo.lastSide = side;
-		// 	sphereInfo.lastAnnotationRect = rect;
-		// }
-
-		// for (var j = 0; j < 10; j++) {
-		// 	for (var k in rects) {
-		// 		var rectK = rects[k];
-		// 		if (rect.intersectsRect(rectK)) {
-		// 			var height = rect.max.y - rect.min.y;
-		// 			rect.min.y = rectK.max.y + 5;
-		// 			rect.max.y = rect.min.y + height;
-		// 			break;
-		// 		}
-		// 	}
-		// } 
-		ctx.fillStyle = Helper.padColor(sphere.color);
-		// ctx.fillRect(sphereInfo.lastAnnotationRect.min.x,
-		//  						 sphereInfo.lastAnnotationRect.min.y,
-		//   					 sphereInfo.lastAnnotationRect.max.x - sphereInfo.lastAnnotationRect.min.x,
-		//    					 sphereInfo.lastAnnotationRect.max.y - sphereInfo.lastAnnotationRect.min.y);
-		ctx.fillRect(point.x, point.y, width, height);
-		//rects.push(rect);
+		infos.push({'rect': rect, 'coordinate': coordinate, 'color': sphere.color, 'side': side});
 	}
-	// var rect = new Rect(coordinate.x - annotation.width / 2,
-	// 									  coordinate.x + annotation.width / 2,
-	// 										coordinate.y - annotation.height / 2,
-	// 										coordinate.y + annotation.height / 2);
+
+	return;
+
+	var positionedRects = [];
+	var collisionRects = [];
+
+	for (var i = 0; i < infos.length; i++) {
+		var info = infos[i];
+		var rect = info.rect;
+		positionedRects.push(rect);
+
+		for (var j = i + 1; j < infos.length; j++) {
+			var rectJ = infos[j].rect;
+			if (rect.intersectsRect(rectJ)) {
+				positionedRects.pop();
+				collisionRects.push(rect)
+				break;
+			}
+		}
+	}
+	//console.log(collisionColor);
+
+
+
+			// ctx.fillStyle = Helper.padColor(info.color);
+			// var coordinate = info.coordinate;
+			// ctx.beginPath();
+			// ctx.moveTo(coordinate.x, coordinate.y);
+			// ctx.lineTo(rect.min.x, rect.min.y);
+			// ctx.stroke();
+
+			// var size = 12;
+			// var offset = size + 2;
+			// ctx.font = size + "pt Helvetica";
+			// ctx.fillText("Nodule", rect.min.x, rect.min.y);
+			// ctx.fillText("Size", rect.min.x, rect.min.y + offset);
+			// ctx.fillText("Iso", rect.min.x, rect.min.y + offset * 2);
+			// ctx.fillText("Mixed", rect.min.x, rect.min.y + offset * 3);
+			// ctx.fillText("Tirads", rect.min.x, rect.min.y + offset * 4);
+			// ctx.fillText("Wtf", rect.min.x, rect.min.y + offset * 5);
 
 
   	//ctx.font = "12pt Helvetica";
