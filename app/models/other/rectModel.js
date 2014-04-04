@@ -55,17 +55,16 @@ rectModel.prototype.intersectionForAngle = function(angle) {
 	return intersection;
 };
 
-rectModel.prototype.sideOfRect = function(point) {
-	var center = {'x': (this.max.x - this.min.x) / 2 + this.min.x, 'y': (this.max.y - this.min.y) / 2 + this.min.y};
-	var relativePoint = {'x': point.x - center.x, 'y': point.y - center.y};
-	var tan = relativePoint.y / relativePoint.x;
-	if (Math.abs(tan) <= 1) {
-		if (relativePoint.x > 0) 
-			return 'right';
+rectModel.prototype.sideOfRectForIntersection = function(point) {
+	if (point.x == this.min.x)
 		return 'left';
-	} else {
-		if (relativePoint.y > 0) 
-			return 'bottom';
+	if (point.x == this.max.x)
+		return 'right';
+	if (point.y == this.min.y)
 		return 'top';
-	}
-}
+	return 'bottom';
+};
+
+rectModel.prototype.expandedRect = function(offset) {
+	return new rectModel(this.min.x - offset, this.max.x + offset, this.min.y - offset, this.max.y + offset);
+};

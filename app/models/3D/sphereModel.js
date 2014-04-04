@@ -1,4 +1,5 @@
 var Object3DModel = require('object3DModel');
+var counter = 0;
 
 var sphereModel = function(scene, radius, color) {
 	Object3DModel.call(this, scene);
@@ -13,6 +14,8 @@ var sphereModel = function(scene, radius, color) {
 	//var material = new THREE.MeshBasicMaterial({color: 0xff0000});
 	this.mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 50, 50),
 							   material);
+	this.id = counter;
+	counter++;
 
 };
 
