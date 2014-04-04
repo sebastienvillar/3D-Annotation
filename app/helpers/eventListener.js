@@ -81,6 +81,8 @@ eventListener.prototype.onTouchEnd = function(e) {
 };
 
 eventListener.prototype.onMouseStart = function(e) {
+	if (!e)
+		console.log('start');
 	this.startTouches = this.mouseTouches(e);
 	if (this.startTouches.length > 0)
 		this.startListeners();
@@ -99,10 +101,9 @@ eventListener.prototype.onMouseMove = function(e) {
 };
 
 eventListener.prototype.onMouseEnd = function(e) {
-	var touches = this.mouseTouches(e);
 	this.touchStarted = false;
-	this.tapListener.end(touches);
-	this.dragListener.end(touches);
+	this.tapListener.end([]);
+	this.dragListener.end([]);
 };
 
 eventListener.prototype.onKeyDown = function(e) {
