@@ -16,7 +16,6 @@ var sphereModel = function(scene, radius, color) {
 							   material);
 	this.id = counter;
 	counter++;
-
 };
 
 sphereModel.prototype = new Object3DModel();

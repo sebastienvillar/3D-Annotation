@@ -1,6 +1,4 @@
 var ThyroidController = require('thyroidController');
-var ThyroidController2 = require('thyroidController2');
-var ThyroidController3 = require('thyroidController3');
 var PositioningController = require('positioningController');
 var EventListener = require('eventListener');
 var Touch = require('touch');
@@ -15,11 +13,31 @@ appController.prototype.init = function() {
 	document.body.appendChild(canvas);
 	canvas.width = canvas.clientWidth;
 	canvas.height = canvas.clientHeight;
-	var thyroidController = new ThyroidController3(canvas);
+	var characteristics = ['Nodule', 'Size', 'Iso', 'Mixed', 'Tirads', 'Wtf'];
+	var ids = [];
+	var thyroidController = new ThyroidController(canvas, function() {
+		thyroidController.enableAnnotations();
+		ids.push(thyroidController.addSphere({x: 0.525,
+			y: 0.7294685990338164,
+			z: 0.13015710382513662}, 0xff0000));
+		ids.push(thyroidController.addSphere({x: 0.6,
+			y: 0.7391304347826086,
+			z: 0.8532445355191256}, 0x00ff00));
+		ids.push(thyroidController.addSphere({x: 0.4625,
+			y: 0.140096618357488,
+			z: 0.9075478142076502}, 0x0000ff));
+		ids.push(thyroidController.addSphere({x: 0.6125,
+			y: 0.7246376811594203,
+			z: 0.5103142076502731}, 0x000000));
 
-	// var div = document.createElement('div');
-	// div.style.width = 800;
-	// div.style.height = 300;
-	// document.body.appendChild(div);
-	// var positioningController = new PositioningController(div, thyroidController);
+		for (var i in ids) {
+			thyroidController.setAnnotations(ids[i], characteristics);
+		}
+	});
+
+	var div = document.createElement('div');
+	div.style.width = 800;
+	div.style.height = 300;
+	document.body.appendChild(div);
+	var positioningController = new PositioningController(div, thyroidController);
 };
