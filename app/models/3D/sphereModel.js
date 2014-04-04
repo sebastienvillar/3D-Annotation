@@ -5,10 +5,10 @@ var sphereModel = function(scene, radius, color) {
 	this.scene = scene;
 	this.radius = radius;
 	var material = new THREE.MeshPhongMaterial({ 
-		specular: 0x222222,
+		specular: 0xdddddd,
 		color: color,
 		emissive: color,
-		shininess: 6,
+		shininess: 10,
 	});
 	//var material = new THREE.MeshBasicMaterial({color: 0xff0000});
 	this.mesh = new THREE.Mesh(new THREE.SphereGeometry(radius, 50, 50),

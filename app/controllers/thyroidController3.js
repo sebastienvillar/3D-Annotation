@@ -1,6 +1,8 @@
 var SphereModel = require('sphereModel');
 var PlaneModel = require('planeModel');
 var ThyroidModel = require('thyroidModel');
+var Rect = require('rectModel');
+var Helper = require('helper');
 var Touch = require('touch');
 
 var thyroidController3 = function(canvas) {
@@ -13,9 +15,7 @@ var thyroidController3 = function(canvas) {
 	this.drawingCanvas.style.top = this.canvas.offsetTop;
 	this.canvas.parentNode.appendChild(this.drawingCanvas);
 	this.renderDepthMap = {};
-	this.spheres = [];
-	this.spheresMesh = [];
-	this.draggingSphere = false;
+	this.spheresInfo = [];
 
 	this.initScene();
 	this.startListening();
@@ -38,7 +38,7 @@ thyroidController3.prototype.initScene = function() {
 	this.camera = new THREE.PerspectiveCamera(45, this.canvas.width / this.canvas.height, 1, 2000);
 	//this.camera.position.z = 30;
 	this.camera.position.x = -45;
-	this.camera.position.y = 15;
+	this.camera.position.y = 20;
 	this.camera.lookAt(new THREE.Vector3(0, 0, 0));
 
 	this.ambientLight = new THREE.AmbientLight(0x222222);
@@ -59,13 +59,11 @@ thyroidController3.prototype.initScene = function() {
 	// 	this.addSphere();
 	// }.bind(this));
 	this.thyroid = new ThyroidModel(this.scene, function() {
-		this.thyroid.setPosition(new THREE.Vector3(0, 0, 0));
+		this.thyroid.setPosition(new THREE.Vector3(0, -3, 0));
 		this.addObject3DToScene(this.thyroid);
-		//var box = this.thyroid.mesh.geometry.boundingBox;
-		box = new THREE.Box3();
-		box.setFromObject(this.thyroid.mesh);
+		//var box = this.thyroid.mesh.geometry.boundingBox
 
-		this.box = box;
+		box = this.thyroid.boundingBox;
 
 		this.addSphere({x: 0.525,
 										y: 0.7294685990338164,
@@ -74,12 +72,28 @@ thyroidController3.prototype.initScene = function() {
 										y: 0.7391304347826086,
 										z: 0.8532445355191256}, 0x00ff00);
 		this.addSphere({x: 0.4625,
-										y: 0.3140096618357488,
-										z: 0.8575478142076502}, 0x0000ff);
+										y: 0.140096618357488,
+										z: 0.9075478142076502}, 0x0000ff);
 		this.addSphere({x: 0.6125,
 										y: 0.7246376811594203,
 										z: 0.5103142076502731}, 0x000000);
 		this.updateAnnotations();
+
+		// var material1 =  new THREE.MeshNormalMaterial({transparent: true, side: THREE.BackSide, opacity:0.4});
+		// var geometry = new THREE.CubeGeometry(box.max.x - box.min.x,
+		// 																							 box.max.y - box.min.y,
+		// 																							 box.max.z - box.min.z,
+		// 																							 10,
+		// 																							 10,
+		// 																							 10);
+		// var cube = new THREE.Mesh(geometry, material1);
+
+		// var material2 =  new THREE.MeshNormalMaterial({transparent: true, side: THREE.FrontSide, opacity:0.4});
+		// cube.add(new THREE.Mesh(geometry, material2));
+		// cube.position.set((box.min.x + box.max.x) / 2,
+		// 									(box.min.y + box.max.y) / 2,
+		// 									(box.min.z + box.max.z) / 2);
+		// this.scene.add(cube);
 	}.bind(this));
 
   //var axisHelper = new THREE.AxisHelper(500);
@@ -114,7 +128,7 @@ thyroidController3.prototype.onDragMove = function(e) {
 	var distance = Math.sqrt(Math.pow(this.camera.position.x, 2) + Math.pow(this.camera.position.z, 2));
 	this.camera.position.x = Math.sin(angle) * distance;
 	this.camera.position.z = Math.cos(angle) * distance;
-	this.camera.lookAt(this.thyroid.position());
+	this.camera.lookAt(new THREE.Vector3(0, 0, 0));
 
 	this.updateAnnotations();
 	
@@ -123,7 +137,6 @@ thyroidController3.prototype.onDragMove = function(e) {
 };
 
 thyroidController3.prototype.onDragEnd = function(e) {
-
 };
 
 thyroidController3.prototype.nextRenderDepth = function() {
@@ -151,42 +164,185 @@ thyroidController3.prototype.removeObject3DFromScene = function(object) {
 
 thyroidController3.prototype.addSphere = function(ratios, color) {
 	var sphere = new SphereModel(this.scene, 0.8, color);
-	this.spheres.push(sphere);
-	this.spheresMesh.push(sphere.mesh);
+	sphere.color = color;
+	this.spheresInfo.push({'sphere': sphere});
 	this.addObject3DToScene(sphere);
 
-	var x = this.box.max.x - ratios.x * (this.box.max.x - this.box.min.x);
-	var y = this.box.max.y - ratios.y * (this.box.max.y - this.box.min.y);
-	var z = this.box.min.z + ratios.z * (this.box.max.z - this.box.min.z);
+	var x = this.thyroid.boundingBox.max.x - ratios.x * (this.thyroid.boundingBox.max.x - this.thyroid.boundingBox.min.x);
+	var y = this.thyroid.boundingBox.max.y - ratios.y * (this.thyroid.boundingBox.max.y - this.thyroid.boundingBox.min.y);
+	var z = this.thyroid.boundingBox.min.z + ratios.z * (this.thyroid.boundingBox.max.z - this.thyroid.boundingBox.min.z);
 	sphere.setPosition(new THREE.Vector3(x, y ,z));
 	
 	return sphere;
 };
 
 thyroidController3.prototype.updateAnnotations = function() {
-	var projector = new THREE.Projector();
+
+	//Clear canvas
 	var ctx = this.drawingCanvas.getContext("2d");
 	ctx.clearRect(0, 0, this.drawingCanvas.width, this.drawingCanvas.height);
-	for (var i in this.spheres) {
-		var sphere = this.spheres[i];
-		var vector1 = projector.projectVector(sphere.position(), this.camera);
-		console.log(sphere.topExtremity());
-		var vector2 = projector.projectVector(sphere.topExtremity(), this.camera);
 
-		var x1 = Math.round((vector1.x * this.canvas.width / 2)) + (this.canvas.width / 2);
-		var y1 = - Math.round((vector1.y * this.canvas.height / 2)) + (this.canvas.height / 2);
-		var x2 = Math.round((vector2.x * this.canvas.width / 2)) + (this.canvas.width / 2);
-		var y2 = - Math.round((vector2.y * this.canvas.height / 2)) + (this.canvas.height / 2);
-  	//ctx.beginPath();
-  	//ctx.arc(vector.x, vector.y, 5, 0, 2 * Math.PI);
-  	//ctx.fill();
-  	var text = (parseInt(i) + 1).toString();
-  	ctx.beginPath();
-  	ctx.moveTo(x2, y2);
-  	ctx.lineTo(x2 + 20, y2 - 40);
-  	ctx.lineTo(x2 + 60, y2 - 40);
-  	ctx.stroke();
-  	ctx.font = "12pt Helvetica";
-  	ctx.fillText(text, x1 - ctx.measureText(text).width / 2, y1 + 6);
+	//Find thyroid bounding box in 2D
+	var projector = new THREE.Projector();
+	var corners = [];
+	var box = this.thyroid.boundingBox;
+
+	corners.push(Helper.screenCoordinateFromVector(projector.projectVector(new THREE.Vector3(box.min.x, box.min.y, box.min.z), this.camera), this.canvas));
+	corners.push(Helper.screenCoordinateFromVector(projector.projectVector(new THREE.Vector3(box.min.x, box.max.y, box.min.z), this.camera), this.canvas));
+	corners.push(Helper.screenCoordinateFromVector(projector.projectVector(new THREE.Vector3(box.min.x, box.max.y, box.max.z), this.camera), this.canvas));
+	corners.push(Helper.screenCoordinateFromVector(projector.projectVector(new THREE.Vector3(box.min.x, box.min.y, box.max.z), this.camera), this.canvas));
+	corners.push(Helper.screenCoordinateFromVector(projector.projectVector(new THREE.Vector3(box.max.x, box.min.y, box.min.z), this.camera), this.canvas));
+	corners.push(Helper.screenCoordinateFromVector(projector.projectVector(new THREE.Vector3(box.max.x, box.min.y, box.max.z), this.camera), this.canvas));
+	corners.push(Helper.screenCoordinateFromVector(projector.projectVector(new THREE.Vector3(box.max.x, box.max.y, box.min.z), this.camera), this.canvas));
+	corners.push(Helper.screenCoordinateFromVector(projector.projectVector(new THREE.Vector3(box.max.x, box.max.y, box.max.z), this.camera), this.canvas));
+
+	var boundingRect = new Rect(Number.POSITIVE_INFINITY,
+											  	   Number.NEGATIVE_INFINITY,
+									    			 Number.POSITIVE_INFINITY,
+									    			 Number.NEGATIVE_INFINITY);
+
+	for (var i in corners) {
+		var corner = corners[i];
+		boundingRect.min.x = Math.min(boundingRect.min.x, corner.x);
+		boundingRect.min.y = Math.min(boundingRect.min.y, corner.y);
+		boundingRect.max.x = Math.max(boundingRect.max.x, corner.x);
+		boundingRect.max.y = Math.max(boundingRect.max.y, corner.y);
 	}
+
+	//Draw thyroid bounding box in 2D
+	ctx.beginPath();
+	ctx.moveTo(boundingRect.min.x, boundingRect.min.y);
+	ctx.lineTo(boundingRect.max.x, boundingRect.min.y);
+	ctx.lineTo(boundingRect.max.x, boundingRect.max.y);
+	ctx.lineTo(boundingRect.min.x, boundingRect.max.y);
+	ctx.closePath();
+	ctx.stroke();
+
+	//Adjust positions
+	var rects = [];
+	var canvasRect = new Rect(0, this.canvas.width, 0, this.canvas.height);
+
+	for (var i in this.spheresInfo) {
+		var sphereInfo = this.spheresInfo[i];
+		sphereInfo.coordinate = Helper.screenCoordinateFromVector(projector.projectVector(sphereInfo.sphere.position(), this.camera), this.canvas);
+	}
+
+	this.spheresInfo.sort(function(s1, s2) {
+		if (s1.coordinate.y < s2.coordinate.y)
+			return -1
+		return 1;
+	})
+
+	for (var i in this.spheresInfo) {
+		var sphereInfo = this.spheresInfo[i];
+		var sphere = sphereInfo.sphere;
+		var coordinate = sphereInfo.coordinate;
+		var lastAnnotationRect = sphereInfo.lastAnnotationRect;
+		var lastSide = sphereInfo.lastSide;
+		var lastOffset = sphereInfo.lastOffset;
+
+		// var leftOffset = coordinate.x - boundingRect.min.x;
+		// var rightOffset = boundingRect.max.x - coordinate.x;
+		// var topOffset = coordinate.y - boundingRect.min.y;
+		// var bottomOffset = boundingRect.max.y - coordinate.y;
+		// var offset = Math.min(leftOffset, rightOffset, topOffset, bottomOffset);
+
+		// var side;
+		// if (offset == leftOffset)
+		// 	side = 'left';
+		// else if (offset == rightOffset)
+		// 	side = 'right';
+		// else if (offset == topOffset)
+		// 	side = 'top';
+		// else
+		// 	side = 'bottom';
+		var width = 150;
+		var height = 160;
+		var point = boundingRect.intersectionForPointFromCenter(coordinate);
+		var side = boundingRect.sideOfRect(coordinate);
+		if (side == 'left') {
+			point.x -= width;
+			point.y -= height / 2;
+		} else if (side == 'right') {
+			point.y -= height / 2;
+		}	else if (side == 'top') {
+			point.y -= height;
+			point.x -= width / 2;
+		} else {
+			point.x -= height / 2;
+		}
+
+		var rect = new Rect(point.x, point.x + width, point.y, point.y + height);
+		console.log(rect);
+		console.log(canvasRect);
+		if (!rect.insideRect(canvasRect))
+			continue;
+		// ctx.beginPath();
+		// ctx.moveTo((boundingRect.max.x - boundingRect.min.x) / 2 + boundingRect.min.x, (boundingRect.max.y - boundingRect.min.y) / 2 + boundingRect.min.y);
+		// ctx.lineTo(boundingRect.max.x, boundingRect.min.y);
+		// ctx.stroke();
+
+		// ctx.beginPath();
+		// ctx.arc(coordinate.x, coordinate.y, 5, 0, Math.PI * 2);
+		// ctx.fill();
+
+		// if (needRefresh) {
+		// 	var rectWidth = 150;
+		// 	var rectHeight = 160;
+
+
+		// 	if (offset == leftOffset) {
+		// 		var rect = new Rect(boundingRect.min.x - rectWidth,
+		// 									  		boundingRect.min.x,
+		// 												coordinate.y - rectHeight / 2,
+		// 												coordinate.y + rectHeight / 2);
+		// 	} else if (offset == rightOffset) {
+		// 		var rect = new Rect(boundingRect.max.x,
+		// 									  		boundingRect.max.x + rectWidth,
+		// 												coordinate.y - rectHeight / 2,
+		// 												coordinate.y + rectHeight / 2);
+		// 	} else if (offset == topOffset) {
+		// 		var rect = new Rect(coordinate.x - rectWidth / 2,
+		// 									  		coordinate.x + rectWidth / 2,
+		// 												boundingRect.min.y - rectHeight,
+		// 												boundingRect.min.y);
+		// 	} else {
+		// 		var rect = new Rect(coordinate.x - rectWidth / 2,
+		// 									  		coordinate.x + rectWidth / 2,
+		// 												boundingRect.max.y,
+		// 												boundingRect.max.y + rectHeight);
+		// 	}
+
+		// 	sphereInfo.lastOffset = offset;
+		// 	sphereInfo.lastSide = side;
+		// 	sphereInfo.lastAnnotationRect = rect;
+		// }
+
+		// for (var j = 0; j < 10; j++) {
+		// 	for (var k in rects) {
+		// 		var rectK = rects[k];
+		// 		if (rect.intersectsRect(rectK)) {
+		// 			var height = rect.max.y - rect.min.y;
+		// 			rect.min.y = rectK.max.y + 5;
+		// 			rect.max.y = rect.min.y + height;
+		// 			break;
+		// 		}
+		// 	}
+		// } 
+		ctx.fillStyle = Helper.padColor(sphere.color);
+		// ctx.fillRect(sphereInfo.lastAnnotationRect.min.x,
+		//  						 sphereInfo.lastAnnotationRect.min.y,
+		//   					 sphereInfo.lastAnnotationRect.max.x - sphereInfo.lastAnnotationRect.min.x,
+		//    					 sphereInfo.lastAnnotationRect.max.y - sphereInfo.lastAnnotationRect.min.y);
+		ctx.fillRect(point.x, point.y, width, height);
+		//rects.push(rect);
+	}
+	// var rect = new Rect(coordinate.x - annotation.width / 2,
+	// 									  coordinate.x + annotation.width / 2,
+	// 										coordinate.y - annotation.height / 2,
+	// 										coordinate.y + annotation.height / 2);
+
+
+  	//ctx.font = "12pt Helvetica";
+  	//ctx.fillText(text, x1 - ctx.measureText(text).width / 2, y1 + 6);
 }
