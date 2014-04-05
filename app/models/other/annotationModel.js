@@ -72,6 +72,10 @@ annotationModel.prototype.getAnchor = function() {
 	return this.anchor;
 };
 
+annotationModel.prototype.getOrigin = function() {
+	return this.origin;
+};
+
 annotationModel.prototype.getWidth = function() {
 	return this.width;
 };
@@ -86,19 +90,35 @@ annotationModel.prototype.pointerIntersectsAnnotation = function(annotation) {
 	return segment1.intersectsSegment(segment2);
 };
 
-annotationModel.prototype.draw = function() {
+annotationModel.prototype.drawTextAtPoint = function(point) {
 	var ctx = this.canvas.getContext('2d');
 	ctx.strokeStyle = this.color;
 	ctx.font = this.fontSize + "pt Helvetica";
 
 	for (var i in this.lines) {
 		var offset = this.lineSpacing * i + this.fontSize;
-		ctx.fillText(this.lines[i], this.origin.x, this.origin.y + i * this.fontSize + offset);
+		ctx.fillText(this.lines[i], point.x, point.y + i * this.fontSize + offset);
 	}
+	ctx.strokeRect(point.x, point.y, this.width, this.height);
+};
 
+annotationModel.prototype.drawPointerAtPoint = function(point) {
+	var ctx = this.canvas.getContext('2d');
+	ctx.strokeStyle = this.color;
+	ctx.font = this.fontSize + "pt Helvetica";
 	ctx.beginPath();
 	ctx.moveTo(this.pointerStart.x, this.pointerStart.y);
-	ctx.lineTo(this.anchor.x, this.anchor.y);
+	ctx.lineTo(point.x, point.y);
 	ctx.stroke();
-	ctx.strokeRect(this.origin.x, this.origin.y, this.width, this.height);
+}
+
+annotationModel.prototype.copy = function() {
+	var copy = new annotationModel(this.lines, this.canvas);
+	copy.color = this.color;
+	copy.width = this.width;
+	copy.height = this.height;
+	copy.anchor = this.anchor;
+	copy.pointerStart = this.pointerStart;
+	copy.origin = this.origin;
+	return copy;
 };

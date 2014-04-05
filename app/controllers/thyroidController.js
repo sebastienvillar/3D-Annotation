@@ -7,6 +7,11 @@ var Annotation = require('annotationModel');
 var Helper = require('helper');
 var Touch = require('touch');
 
+window.requestAnimationFrame = window.requestAnimationFrame ||
+														   window.mozRequestAnimationFrame ||
+                               window.webkitRequestAnimationFrame || 
+                               window.msRequestAnimationFrame;
+
 var thyroidController = function(canvas, callback) {
 	this.canvas = canvas;
 	this.drawingCanvas = document.createElement('canvas');
@@ -19,8 +24,15 @@ var thyroidController = function(canvas, callback) {
 	this.renderDepthMap = {};
 	this.spheresMap = {};
 	this.annotationsMap = {};
+
+	this.oldAnnotationsMap = {};
+	this.newAnnotationsMap = {};
+
 	this.lastRepositioningDirectionMap = {};
 	this.annotationsEnabled = false;
+	this.animationID = null;
+	this.updateAnnotationsCounter = 0;
+
 
 	this.startListening();
 
@@ -134,7 +146,7 @@ thyroidController.prototype.removeObject3DFromScene = function(object) {
 ////////////////
 
 thyroidController.prototype.computeAnnotationOriginForId = function(id) {
-	var annotation = this.annotationsMap[id];
+	var annotation = this.newAnnotationsMap[id];
 	var anchor = annotation.getAnchor();
 	var quadrant = this.boundingCircle.quadrantForPoint(anchor);
 	var origin = {};
@@ -159,7 +171,7 @@ thyroidController.prototype.computeAnnotationOriginForId = function(id) {
 };
 
 thyroidController.prototype.isCollisionForId = function(id, annotationsOK) {
-	var annotation = this.annotationsMap[id];
+	var annotation = this.newAnnotationsMap[id];
 	var canvasRect = new Rect(0, this.drawingCanvas.width, 0, this.drawingCanvas.height);
 	if (!annotation.getRect().insideRect(canvasRect))
 		return true;
@@ -176,7 +188,7 @@ thyroidController.prototype.isCollisionForId = function(id, annotationsOK) {
 
 thyroidController.prototype.repositionAnnotationForIdWithDirection = function(id, direction, annotationsOK) {
 	var inc = Math.PI / 50;
-	var annotation = this.annotationsMap[id];
+	var annotation = this.newAnnotationsMap[id];
 	var angle = this.boundingCircle.angleForPoint(annotation.getAnchor());
 	var offset = inc;
 
@@ -247,11 +259,25 @@ thyroidController.prototype.computeBoundingCircle = function() {
 
 	this.boundingCircle = new Circle(boundingRect.center(), diag / 2);
 	this.boundingCircle.contract(22);
-}
+};
+
+thyroidController.prototype.needAnnotationsRectRefresh = function() {
+	if (this.updateAnnotationsCounter % 20 == 0 || this.updateAnnotationsCounter < 15) {
+		//this.updateAnnotationsCounter = 0;
+		return true;
+	}
+	return false;
+};
+
+thyroidController.prototype.needAnnotationsPointerRefresh = function() {
+	return true;
+};
 
 thyroidController.prototype.updateAnnotations = function() {
 	if (!this.annotationsEnabled)
 		return;
+
+	this.updateAnnotationsCounter++;
 
 	//Clear canvas
 	var ctx = this.drawingCanvas.getContext("2d");
@@ -260,52 +286,116 @@ thyroidController.prototype.updateAnnotations = function() {
 	//Computer new thyroid bounding circle
 	this.computeBoundingCircle();
 	
-	ctx.beginPath();
-	ctx.arc(this.boundingCircle.center.x, this.boundingCircle.center.y, this.boundingCircle.radius, 0, Math.PI * 2);
-	ctx.stroke();
+	// ctx.beginPath();
+	// ctx.arc(this.boundingCircle.center.x, this.boundingCircle.center.y, this.boundingCircle.radius, 0, Math.PI * 2);
+	// ctx.stroke();
 
 	//Find ideal positions for annotations
 	var projector = new THREE.Projector();
 	for (var key in this.annotationsMap) {
-		var annotation = this.annotationsMap[key];
+		if (this.newAnnotationsMap[key])
+			this.newAnnotationsMap[key] = this.newAnnotationsMap[key].copy();
+		else
+			this.newAnnotationsMap[key] = this.annotationsMap[key].copy();
+
+		var annotation = this.newAnnotationsMap[key];
 		var point = Helper.screenPointForVector(projector.projectVector(this.spheresMap[key].position(), this.camera), this.canvas);
 		var angle = this.boundingCircle.angleForPoint(point);
 		var anchor = this.boundingCircle.intersectionForAngle(angle);
 
-		ctx.beginPath();
-		ctx.arc(anchor.x, anchor.y, 5, 0, Math.PI * 2);
-		ctx.fill();
-		annotation.setAnchor(anchor);
-		annotation.setPointerStart(point);
-		this.computeAnnotationOriginForId(key);
-	}
+		if (this.needAnnotationsPointerRefresh())
+			annotation.setPointerStart(point);
 
-	//Find annotations that collision and need to be moved
-	var annotationsOK = {};
-	var annotationsNotOK = {};
-
-	for (var key in this.annotationsMap) {
-		var annotation = this.annotationsMap[key];
-		if (this.isCollisionForId(key, annotationsOK)) {
-			annotationsNotOK[key] = annotation;
-		}
-		else {
-			annotationsOK[key] = annotation;
+		if (this.needAnnotationsRectRefresh()) {
+			annotation.setAnchor(anchor);
+			this.computeAnnotationOriginForId(key);
 		}
 	}
 
-	//Move annotations if possible or don't show them
-	for (var key in annotationsNotOK) {
-		if (this.repositionAnnotationForId(key, annotationsOK))
-			annotationsOK[key] = annotationsNotOK[key];
-	}
+	if (this.needAnnotationsRectRefresh()) {
+		//Find annotations that collision and need to be moved
+		var annotationsOK = {};
+		var annotationsNotOK = {};
 
-	//Draw annotations
-	for (var key in annotationsOK) {
-		var annotation = annotationsOK[key];
-		var rect = annotation.getRect();
-		annotation.draw();
+		for (var key in this.newAnnotationsMap) {
+			var annotation = this.newAnnotationsMap[key];
+			if (this.isCollisionForId(key, annotationsOK)) {
+				annotationsNotOK[key] = annotation;
+			}
+			else {
+				annotationsOK[key] = annotation;
+			}
+		}
+
+		//Move annotations if possible or don't show them
+		for (var key in annotationsNotOK) {
+			if (this.repositionAnnotationForId(key, annotationsOK))
+				annotationsOK[key] = annotationsNotOK[key];
+		}
+
+		this.animateAnnotations(annotationsOK);
+	} else {
+		this.drawAnnotations(this.newAnnotationsMap); 
 	}
+};
+
+thyroidController.prototype.drawAnnotations = function(annotations) {
+	for (var key in annotations) {
+		var newA = this.newAnnotationsMap[key];
+		newA.drawPointerAtPoint(newA.getAnchor());
+		newA.drawTextAtPoint(newA.getOrigin());
+	}
+};
+
+thyroidController.prototype.animateAnnotations = function(annotations) {
+	if (this.animationID !== null)
+		cancelAnimationFrame(this.animationID);
+
+	var time;
+	var animationDuration = 300;
+	var progress = 0;
+
+	var loop = function() {
+		this.animationID = requestAnimationFrame(loop);
+		this.drawingCanvas.getContext('2d').clearRect(0, 0, this.drawingCanvas.width, this.drawingCanvas.height);
+
+		var now = new Date().getTime();
+    var dt = now - (time || now);
+    time = now;
+
+		progress += dt / animationDuration;
+		if (progress > 1) {
+			console.log('in');
+			for (var key in this.newAnnotationsMap) {
+				this.oldAnnotationsMap[key] = this.newAnnotationsMap[key].copy();
+			}
+			cancelAnimationFrame(this.animationID);
+			this.animationID = null;
+		}
+
+		for (var key in annotations) {
+			var newA = this.newAnnotationsMap[key];
+			var oldA = this.oldAnnotationsMap[key];
+			if (!oldA) {
+				oldA = newA;
+			}
+
+			//Compute origin
+			var oldOrigin = oldA.getOrigin();
+			var newOrigin = newA.getOrigin();
+			var interOrigin = {'x': oldOrigin.x + (newOrigin.x - oldOrigin.x) * progress,
+												 'y': oldOrigin.y + (newOrigin.y - oldOrigin.y) * progress};
+
+			//Compute anchor
+			var oldAnchor = oldA.getAnchor();
+			var newAnchor = newA.getAnchor();
+			var interAnchor = {'x': oldAnchor.x + (newAnchor.x - oldAnchor.x) * progress,
+												 'y': oldAnchor.y + (newAnchor.y - oldAnchor.y) * progress};
+			newA.drawTextAtPoint(interOrigin);
+			newA.drawPointerAtPoint(interAnchor);
+		}
+	}.bind(this);
+	this.animationID = requestAnimationFrame(loop);
 };
 
 ////////////////////////////////
