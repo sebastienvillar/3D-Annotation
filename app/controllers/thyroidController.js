@@ -158,21 +158,22 @@ thyroidController.prototype.computeAnnotationOriginForId = function(id) {
 	annotation.setOrigin(origin);
 };
 
-thyroidController.prototype.isCollisionForId = function(id, annotationsOk) {
+thyroidController.prototype.isCollisionForId = function(id, annotationsOK) {
 	var annotation = this.annotationsMap[id];
 	var canvasRect = new Rect(0, this.drawingCanvas.width, 0, this.drawingCanvas.height);
 	if (!annotation.getRect().insideRect(canvasRect))
 		return true;
 
-	for (var key in annotationsOk) {
-		var annotationI = annotationsOk[key];
-		if (annotation.isCollision(annotationI))
+	for (var key in annotationsOK) {
+		var annotationI = annotationsOK[key];
+		if (annotation.isCollision(annotationI)) {
 			return true;
+		}
 	}	
 	return false;
 };
 
-thyroidController.prototype.repositionAnnotationForIdWithDirection = function(id, direction) {
+thyroidController.prototype.repositionAnnotationForIdWithDirection = function(id, direction, annotationsOK) {
 	var inc = Math.PI / 18;
 	var annotation = this.annotationsMap[id];
 	var angle = this.boundingCircle.angleForPoint(annotation.getAnchor());
@@ -180,9 +181,16 @@ thyroidController.prototype.repositionAnnotationForIdWithDirection = function(id
 
 	while (offset <= Math.PI / 2) {
 		var newAnchor = this.boundingCircle.intersectionForAngle(angle + offset * direction);
+		var ctx = this.drawingCanvas.getContext('2d');
+		ctx.fillStyle = '#ff0000';
+		ctx.beginPath();
+		ctx.arc(newAnchor.x, newAnchor.y, 5, 0, Math.PI * 2);
+		ctx.fill();
+		ctx.fillStyle = "000000";
+
 		annotation.setAnchor(newAnchor);
 		this.computeAnnotationOriginForId(id);
-		if (!this.isCollisionForId(id))
+		if (!this.isCollisionForId(id, annotationsOK))
 			return true;
 		offset += inc;
 	}
@@ -191,18 +199,18 @@ thyroidController.prototype.repositionAnnotationForIdWithDirection = function(id
 
 thyroidController.prototype.repositionAnnotationForId = function(id, annotationsOK) {
 	//No last direction
-	if (!this.lastRepositioningDirectionMap[id])
+	if (!this.lastRepositioningDirectionMap[id]) 
 		this.lastRepositioningDirectionMap[id] = 1;
 
 
-	if (this.repositionAnnotationForIdWithDirection(id, this.lastRepositioningDirectionMap[id]))
+	if (this.repositionAnnotationForIdWithDirection(id, this.lastRepositioningDirectionMap[id], annotationsOK))
 		return true;
-	else if (this.repositionAnnotationForIdWithDirection(id, - this.lastRepositioningDirectionMap[id])) {
+	else if (this.repositionAnnotationForIdWithDirection(id, - this.lastRepositioningDirectionMap[id], annotationsOK)) {
 		this.lastRepositioningDirectionMap[id] = - this.lastRepositioningDirectionMap[id];
 		return true;
 	}
 	else 
-		delete(this.repositionAnnotationForIdWithDirection[id]);
+		delete(this.lastRepositioningDirectionMap[id]);
 	return false;
 }
 
@@ -267,6 +275,7 @@ thyroidController.prototype.updateAnnotations = function() {
 		ctx.arc(anchor.x, anchor.y, 5, 0, Math.PI * 2);
 		ctx.fill();
 		annotation.setAnchor(anchor);
+		annotation.setPointerStart(point);
 		this.computeAnnotationOriginForId(key);
 	}
 
@@ -286,14 +295,14 @@ thyroidController.prototype.updateAnnotations = function() {
 
 	//Move annotations if possible or don't show them
 	for (var key in annotationsNotOK) {
-		if (this.repositionAnnotationForId(key))
+		if (this.repositionAnnotationForId(key, annotationsOK))
 			annotationsOK[key] = annotationsNotOK[key];
 	}
 
 	//Draw annotations
 	for (var key in annotationsOK) {
 		var annotation = annotationsOK[key];
-		annotation.setPointerStart(this.boundingCircle.center);
+		var rect = annotation.getRect();
 		annotation.draw();
 	}
 };
