@@ -166,7 +166,8 @@ thyroidController.prototype.isCollisionForId = function(id, annotationsOK) {
 
 	for (var key in annotationsOK) {
 		var annotationI = annotationsOK[key];
-		if (annotation.isCollision(annotationI)) {
+		if (annotation.isCollision(annotationI) ||
+		    annotation.pointerIntersectsAnnotation(annotationI)) {
 			return true;
 		}
 	}	
@@ -174,7 +175,7 @@ thyroidController.prototype.isCollisionForId = function(id, annotationsOK) {
 };
 
 thyroidController.prototype.repositionAnnotationForIdWithDirection = function(id, direction, annotationsOK) {
-	var inc = Math.PI / 18;
+	var inc = Math.PI / 50;
 	var annotation = this.annotationsMap[id];
 	var angle = this.boundingCircle.angleForPoint(annotation.getAnchor());
 	var offset = inc;

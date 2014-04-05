@@ -1,4 +1,5 @@
 var Rect = require('rectModel');
+var Segment = require('segmentModel');
 
 var annotationModel = function(lines, canvas) {
 	this.canvas = canvas;
@@ -77,6 +78,12 @@ annotationModel.prototype.getWidth = function() {
 
 annotationModel.prototype.getHeight = function() {
 	return this.height;
+};
+
+annotationModel.prototype.pointerIntersectsAnnotation = function(annotation) {
+	var segment1 = new Segment(this.pointerStart, this.anchor);
+	var segment2 = new Segment(annotation.pointerStart, annotation.anchor);
+	return segment1.intersectsSegment(segment2);
 };
 
 annotationModel.prototype.draw = function() {
