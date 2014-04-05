@@ -1,7 +1,7 @@
 
 var helper = function() {};
 
-helper.screenCoordinateFromVector = function(vector, canvas) {
+helper.screenPointForVector = function(vector, canvas) {
 	var x = Math.round((vector.x * canvas.width / 2)) + (canvas.width / 2);
 	var y = - Math.round((vector.y * canvas.height / 2)) + (canvas.height / 2);
 	return {'x': x, 'y': y};

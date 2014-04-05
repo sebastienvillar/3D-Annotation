@@ -19,25 +19,25 @@ appController.prototype.init = function() {
 		thyroidController.enableAnnotations();
 		ids.push(thyroidController.addSphere({x: 0.525,
 			y: 0.7294685990338164,
-			z: 0.13015710382513662}, 0xff0000));
+			z: 0.13015710382513662}, '#ff0000'));
 		ids.push(thyroidController.addSphere({x: 0.6,
 			y: 0.7391304347826086,
-			z: 0.8532445355191256}, 0x00ff00));
+			z: 0.8532445355191256}, '#00ff00'));
 		ids.push(thyroidController.addSphere({x: 0.4625,
 			y: 0.140096618357488,
-			z: 0.9075478142076502}, 0x0000ff));
+			z: 0.9075478142076502}, '#0000ff'));
 		ids.push(thyroidController.addSphere({x: 0.6125,
 			y: 0.7246376811594203,
-			z: 0.5103142076502731}, 0x000000));
+			z: 0.5103142076502731}, '#000000'));
 
 		for (var i in ids) {
-			thyroidController.setAnnotations(ids[i], characteristics);
+			thyroidController.setAnnotation(ids[i], characteristics);
 		}
 	});
 
-	var div = document.createElement('div');
-	div.style.width = 800;
-	div.style.height = 300;
-	document.body.appendChild(div);
-	var positioningController = new PositioningController(div, thyroidController);
+	// var div = document.createElement('div');
+	// div.style.width = 800;
+	// div.style.height = 300;
+	// document.body.appendChild(div);
+	// var positioningController = new PositioningController(div, thyroidController);
 };

@@ -2,6 +2,8 @@ var SphereModel = require('sphereModel');
 var PlaneModel = require('planeModel');
 var ThyroidModel = require('thyroidModel');
 var Rect = require('rectModel');
+var Circle = require('circleModel');
+var Annotation = require('annotationModel');
 var Helper = require('helper');
 var Touch = require('touch');
 
@@ -15,12 +17,10 @@ var thyroidController = function(canvas, callback) {
 	this.drawingCanvas.style.top = this.canvas.offsetTop;
 	this.canvas.parentNode.appendChild(this.drawingCanvas);
 	this.renderDepthMap = {};
-	this.spheresInfo = {};
-	this.lastCollisionsInfo = {};
+	this.spheresMap = {};
+	this.annotationsMap = {};
+	this.lastRepositioningDirectionMap = {};
 	this.annotationsEnabled = false;
-	this.annotationsFontSize = 12;
-	this.annotationsTextOffset = 3;
-	this.drawingCanvas.getContext('2d').font = this.annotationsFontSize + "pt Helvetica";
 
 	this.startListening();
 
@@ -129,122 +129,96 @@ thyroidController.prototype.removeObject3DFromScene = function(object) {
 	this.renderDepthMap[renderDepth] = null;
 };
 
-thyroidController.prototype.rectForInfo = function(info, boundingRect) {
-	var side = boundingRect.sideOfRectForIntersection(info.intersection);
-	var point = {'x': info.intersection.x, 'y': info.intersection.y};
-	if (side == 'left') {
-		point.x -= info.annotationWidth;
-		point.y -= info.annotationHeight / 2;
-	} else if (side == 'right') {
-		point.y -= info.annotationHeight / 2;
-	}	else if (side == 'top') {
-		point.y -= info.annotationHeight;
-		point.x -= info.annotationWidth / 2;
+////////////////
+//Annotations
+////////////////
+
+thyroidController.prototype.computeAnnotationOriginForId = function(id) {
+	var annotation = this.annotationsMap[id];
+	var anchor = annotation.getAnchor();
+	var quadrant = this.boundingCircle.quadrantForPoint(anchor);
+	var origin = {};
+	var width = annotation.getWidth();
+	var height = annotation.getHeight();
+
+	if (quadrant == Circle.TOP_LEFT_QUADRANT) {
+		origin.x = anchor.x - width;
+		origin.y = anchor.y - height;
+	} else if (quadrant == Circle.TOP_RIGHT_QUADRANT) {
+		origin.x = anchor.x;
+		origin.y = anchor.y - height;
+	} else if (quadrant == Circle.BOTTOM_LEFT_QUADRANT) {
+		origin.x = anchor.x - width;
+		origin.y = anchor.y;
 	} else {
-		point.x -= info.annotationWidth / 2;
+		origin.x = anchor.x;
+		origin.y = anchor.y;
 	}
-	return new Rect(point.x, point.x + info.annotationWidth, point.y, point.y + info.annotationHeight);
+	
+	annotation.setOrigin(origin);
 };
 
-thyroidController.prototype.isRectAvailable = function(rect, positionedInfo) {
+thyroidController.prototype.isCollisionForId = function(id, annotationsOk) {
+	var annotation = this.annotationsMap[id];
 	var canvasRect = new Rect(0, this.drawingCanvas.width, 0, this.drawingCanvas.height);
-	if (!rect.insideRect(canvasRect))
-		return false;
-	for (var i = 0; i < positionedInfo.length; i++) {
-		var rectI = positionedInfo[i].labelRect;
-		if (rect.intersectsRect(rectI))
-			return false;
+	if (!annotation.getRect().insideRect(canvasRect))
+		return true;
+
+	for (var key in annotationsOk) {
+		var annotationI = annotationsOk[key];
+		if (annotation.isCollision(annotationI))
+			return true;
 	}	
-	return true;
+	return false;
 };
 
-thyroidController.prototype.nearestAvailableRect = function(info, positionedInfo, boundingRect) {
-	var angle = boundingRect.angleForPoint(info.coordinate);
+thyroidController.prototype.repositionAnnotationForIdWithDirection = function(id, direction) {
 	var inc = Math.PI / 18;
+	var annotation = this.annotationsMap[id];
+	var angle = this.boundingCircle.angleForPoint(annotation.getAnchor());
+	var offset = inc;
 
-	var findForDirection = function(direction) {
-		var offset = inc;
-		while (offset <= Math.PI / 2) {
-			var intersection = boundingRect.intersectionForAngle(angle + offset * direction);
-			var newRect = this.rectForInfo(info, boundingRect);
-			if (this.isRectAvailable(newRect, positionedInfo))
-				return {'intersection': intersection, 'rect': newRect};
-			offset += inc;
-		}
-		return null;
-	}.bind(this);
+	while (offset <= Math.PI / 2) {
+		var newAnchor = this.boundingCircle.intersectionForAngle(angle + offset * direction);
+		annotation.setAnchor(newAnchor);
+		this.computeAnnotationOriginForId(id);
+		if (!this.isCollisionForId(id))
+			return true;
+		offset += inc;
+	}
+	return false;
+};
 
+thyroidController.prototype.repositionAnnotationForId = function(id, annotationsOK) {
 	//No last direction
-	var lastCollisionInfo = this.lastCollisionsInfo[info.sphere.id];
-	if (!lastCollisionInfo) {
-		lastCollisionInfo = {};
-		var found1 = findForDirection(1);
-		var found2 = findForDirection(-1);
-		if (!found1 && !found2)
-			return null;
+	if (!this.lastRepositioningDirectionMap[id])
+		this.lastRepositioningDirectionMap[id] = 1;
 
-		if (!found1)
-			lastCollisionInfo.direction = -1;
-		else if (!found2)
-			lastCollisionInfo.direction = 1;
-		else if (Math.sqrt(Math.pow(found1.rect.center.x - info.labelRect.center.x, 2) +
-			Math.pow(found1.rect.center.y - info.labelRect.center.y, 2)) <
-			Math.sqrt(Math.pow(found2.rect.center.x - info.labelRect.center.x, 2) +
-				Math.pow(found2.rect.center.y - info.labelRect.center.y, 2)))
-			lastCollisionInfo.direction = 1;
-		else
-			lastCollisionInfo.direction = -1;
-		this.lastCollisionsInfo[info.sphere.id] = lastCollisionInfo;
 
-		if (lastCollisionInfo.direction = 1) {
-			info.intersection = found1.intersection;
-			return found1.rect;
-		}
-		else {
-			info.intersection = found2.intersection;
-			return found2.rect;
-		}
+	if (this.repositionAnnotationForIdWithDirection(id, this.lastRepositioningDirectionMap[id]))
+		return true;
+	else if (this.repositionAnnotationForIdWithDirection(id, - this.lastRepositioningDirectionMap[id])) {
+		this.lastRepositioningDirectionMap[id] = - this.lastRepositioningDirectionMap[id];
+		return true;
 	}
-
-	//Last direction
-	var found = findForDirection(lastCollisionInfo.direction);
-	if (found) {
-		info.intersection = found.intersection;
-		return found.rect;
-	}
-
-	found = findForDirection(-lastCollisionInfo.direction);
-	if (found) {
-		lastCollisionInfo.direction = -lastCollisionInfo.direction;
-		info.intersection = found.intersection;
-		return found.rect;
-	}
-
-	delete(this.lastCollisionsInfo[info.sphere.id]);
-	return null;
+	else 
+		delete(this.repositionAnnotationForIdWithDirection[id]);
+	return false;
 }
 
-thyroidController.prototype.updateAnnotations = function() {
-	if (!this.annotationsEnabled)
-		return;
-
-	//Clear canvas
-	var ctx = this.drawingCanvas.getContext("2d");
-	ctx.clearRect(0, 0, this.drawingCanvas.width, this.drawingCanvas.height);
-
-	//Find thyroid bounding box in 2D
+thyroidController.prototype.computeBoundingCircle = function() {
 	var projector = new THREE.Projector();
 	var corners = [];
 	var box = this.thyroid.boundingBox;
 
-	corners.push(Helper.screenCoordinateFromVector(projector.projectVector(new THREE.Vector3(box.min.x, box.min.y, box.min.z), this.camera), this.canvas));
-	corners.push(Helper.screenCoordinateFromVector(projector.projectVector(new THREE.Vector3(box.min.x, box.max.y, box.min.z), this.camera), this.canvas));
-	corners.push(Helper.screenCoordinateFromVector(projector.projectVector(new THREE.Vector3(box.min.x, box.max.y, box.max.z), this.camera), this.canvas));
-	corners.push(Helper.screenCoordinateFromVector(projector.projectVector(new THREE.Vector3(box.min.x, box.min.y, box.max.z), this.camera), this.canvas));
-	corners.push(Helper.screenCoordinateFromVector(projector.projectVector(new THREE.Vector3(box.max.x, box.min.y, box.min.z), this.camera), this.canvas));
-	corners.push(Helper.screenCoordinateFromVector(projector.projectVector(new THREE.Vector3(box.max.x, box.min.y, box.max.z), this.camera), this.canvas));
-	corners.push(Helper.screenCoordinateFromVector(projector.projectVector(new THREE.Vector3(box.max.x, box.max.y, box.min.z), this.camera), this.canvas));
-	corners.push(Helper.screenCoordinateFromVector(projector.projectVector(new THREE.Vector3(box.max.x, box.max.y, box.max.z), this.camera), this.canvas));
+	corners.push(Helper.screenPointForVector(projector.projectVector(new THREE.Vector3(box.min.x, box.min.y, box.min.z), this.camera), this.canvas));
+	corners.push(Helper.screenPointForVector(projector.projectVector(new THREE.Vector3(box.min.x, box.max.y, box.min.z), this.camera), this.canvas));
+	corners.push(Helper.screenPointForVector(projector.projectVector(new THREE.Vector3(box.min.x, box.max.y, box.max.z), this.camera), this.canvas));
+	corners.push(Helper.screenPointForVector(projector.projectVector(new THREE.Vector3(box.min.x, box.min.y, box.max.z), this.camera), this.canvas));
+	corners.push(Helper.screenPointForVector(projector.projectVector(new THREE.Vector3(box.max.x, box.min.y, box.min.z), this.camera), this.canvas));
+	corners.push(Helper.screenPointForVector(projector.projectVector(new THREE.Vector3(box.max.x, box.min.y, box.max.z), this.camera), this.canvas));
+	corners.push(Helper.screenPointForVector(projector.projectVector(new THREE.Vector3(box.max.x, box.max.y, box.min.z), this.camera), this.canvas));
+	corners.push(Helper.screenPointForVector(projector.projectVector(new THREE.Vector3(box.max.x, box.max.y, box.max.z), this.camera), this.canvas));
 
 	var boundingRect = new Rect(Number.POSITIVE_INFINITY,
 		Number.NEGATIVE_INFINITY,
@@ -259,83 +233,68 @@ thyroidController.prototype.updateAnnotations = function() {
 		boundingRect.max.y = Math.max(boundingRect.max.y, corner.y);
 	}
 
-	this.boundingRect = boundingRect;
+	var diag = Math.sqrt(Math.pow(boundingRect.max.x - boundingRect.min.x, 2) + 
+											 Math.pow(boundingRect.max.y - boundingRect.min.y, 2));
 
-	//Draw thyroid bounding box in 2D
-	// ctx.beginPath();
-	// ctx.moveTo(boundingRect.min.x, boundingRect.min.y);
-	// ctx.lineTo(boundingRect.max.x, boundingRect.min.y);
-	// ctx.lineTo(boundingRect.max.x, boundingRect.max.y);
-	// ctx.lineTo(boundingRect.min.x, boundingRect.max.y);
-	// ctx.closePath();
-	// ctx.stroke();
+	this.boundingCircle = new Circle(boundingRect.center(), diag / 2);
+	this.boundingCircle.contract(22);
+}
 
-	//Adjust positions of labels
-	var canvasRect = new Rect(0, this.canvas.width, 0, this.canvas.height);
-	var infos = [];
+thyroidController.prototype.updateAnnotations = function() {
+	if (!this.annotationsEnabled)
+		return;
 
-	//Find rects
-	for (var key in this.spheresInfo) {
-		var info = this.spheresInfo[key];
-		if (!info.annotations || info.annotations.length == 0)
-			continue;
-		var coordinate = Helper.screenCoordinateFromVector(projector.projectVector(info.sphere.position(), this.camera), this.canvas);
+	//Clear canvas
+	var ctx = this.drawingCanvas.getContext("2d");
+	ctx.clearRect(0, 0, this.drawingCanvas.width, this.drawingCanvas.height);
 
-		var angle = boundingRect.angleForPoint(coordinate);
-		var intersection = boundingRect.intersectionForAngle(angle);
+	//Computer new thyroid bounding circle
+	this.computeBoundingCircle();
+	
+	ctx.beginPath();
+	ctx.arc(this.boundingCircle.center.x, this.boundingCircle.center.y, this.boundingCircle.radius, 0, Math.PI * 2);
+	ctx.stroke();
 
-		info.coordinate = coordinate;
-		info.intersection = intersection;
-
-		var rect = this.rectForInfo(info, this.boundingRect);
-		info.labelRect = rect;
-	}
-
-	//Find rects that collision and need to be moved
-	var positionedInfo = [];
-	var collisionedInfo = [];
-
-	var keys = Object.keys(this.spheresInfo);
-
-	for (var key in keys) {
-		var info = this.spheresInfo[key];
-		if (!info.annotations || info.annotations.length == 0)
-			continue;
-
-		var rect = info.labelRect;
-		if (this.isRectAvailable(rect, positionedInfo))
-			positionedInfo.push(info);
-		else {
-			collisionedInfo.push(info);
-		}
-	}
-
-	//Move rects if can or don't show them
-	for (var i = 0; i < collisionedInfo.length; i++) {
-		var info = collisionedInfo[i];
-		var newRect = this.nearestAvailableRect(info, positionedInfo, boundingRect);
-		if (newRect) {
-			info.labelRect = newRect;
-			positionedInfo.push(info);
-		}
-	}
-
-	//Show rects for which we found a position
-	for (var i = 0; i < positionedInfo.length; i++) {
-		var info = positionedInfo[i];
-		var rect = info.labelRect;
-		ctx.fillStyle = Helper.padColor(info.color);
-		ctx.strokeStyle = Helper.padColor(info.color);
-		for (var j in info.annotations) {
-			var offset = this.annotationsTextOffset * j + this.annotationsFontSize;
-			ctx.fillText(info.annotations[j], rect.min.x, rect.min.y + j * this.annotationsFontSize + offset);
-		}
+	//Find ideal positions for annotations
+	var projector = new THREE.Projector();
+	for (var key in this.annotationsMap) {
+		var annotation = this.annotationsMap[key];
+		var point = Helper.screenPointForVector(projector.projectVector(this.spheresMap[key].position(), this.camera), this.canvas);
+		var angle = this.boundingCircle.angleForPoint(point);
+		var anchor = this.boundingCircle.intersectionForAngle(angle);
 
 		ctx.beginPath();
-		ctx.moveTo(info.coordinate.x, info.coordinate.y);
-		ctx.lineTo(info.intersection.x, info.intersection.y);
-		ctx.stroke();
-		ctx.strokeRect(rect.min.x, rect.min.y, rect.max.x - rect.min.x, rect.max.y - rect.min.y);
+		ctx.arc(anchor.x, anchor.y, 5, 0, Math.PI * 2);
+		ctx.fill();
+		annotation.setAnchor(anchor);
+		this.computeAnnotationOriginForId(key);
+	}
+
+	//Find annotations that collision and need to be moved
+	var annotationsOK = {};
+	var annotationsNotOK = {};
+
+	for (var key in this.annotationsMap) {
+		var annotation = this.annotationsMap[key];
+		if (this.isCollisionForId(key, annotationsOK)) {
+			annotationsNotOK[key] = annotation;
+		}
+		else {
+			annotationsOK[key] = annotation;
+		}
+	}
+
+	//Move annotations if possible or don't show them
+	for (var key in annotationsNotOK) {
+		if (this.repositionAnnotationForId(key))
+			annotationsOK[key] = annotationsNotOK[key];
+	}
+
+	//Draw annotations
+	for (var key in annotationsOK) {
+		var annotation = annotationsOK[key];
+		annotation.setPointerStart(this.boundingCircle.center);
+		annotation.draw();
 	}
 };
 
@@ -345,37 +304,20 @@ thyroidController.prototype.updateAnnotations = function() {
 
 thyroidController.prototype.addSphere = function(ratios, color) {
 	var sphere = new SphereModel(this.scene, 0.8, color);
-	this.spheresInfo[sphere.id] = {'color': color,
-																 'sphere': sphere,
-																 'annotations': [],
-																 'annotationWidth': 0,
-																 'annotationHeight': 0};
+	this.spheresMap[sphere.id] = sphere;
 	this.addObject3DToScene(sphere);
 
 	var x = this.thyroid.boundingBox.max.x - ratios.x * (this.thyroid.boundingBox.max.x - this.thyroid.boundingBox.min.x);
 	var y = this.thyroid.boundingBox.max.y - ratios.y * (this.thyroid.boundingBox.max.y - this.thyroid.boundingBox.min.y);
 	var z = this.thyroid.boundingBox.min.z + ratios.z * (this.thyroid.boundingBox.max.z - this.thyroid.boundingBox.min.z);
 	sphere.setPosition(new THREE.Vector3(x, y ,z));
-	this.updateAnnotations()
+	this.updateAnnotations();
 	return sphere.id;
 };
 
-thyroidController.prototype.setAnnotations = function(id, annotations) {
-	if (!annotations || annotations.length == 0)
-		return;
-
-	var info = this.spheresInfo[id];
-	var width = 0;
-	var ctx = this.drawingCanvas.getContext("2d");
-	for (var i in annotations) {
-		var c = annotations[i];
-		width = Math.max(width, ctx.measureText(c).width);
-	}
-	var height = annotations.length * this.annotationsFontSize + 
-							 (annotations.length - 1) * this.annotationsTextOffset;
-	info.annotationWidth = width;
-	info.annotationHeight = height;
-	info.annotations = annotations;
+thyroidController.prototype.setAnnotation = function(id, lines) {
+	var annotation = new Annotation(lines, this.drawingCanvas);
+	this.annotationsMap[id] = annotation;
 	this.updateAnnotations();
 }
 
