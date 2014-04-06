@@ -7,9 +7,9 @@ var annotationModel = function(lines, canvas) {
 	this.fontSize = 12;
 	this.lineSpacing = 3;
 	this.color = '#000000';
-	this.pointerStart = null;
-	this.anchor = null;
-	this.origin = null;
+	this.pointerStart = {'x': 0, 'y': 0};
+	this.anchor = {'x': 0, 'y': 0};
+	this.origin = {'x': 0, 'y': 0};
 
 	this.width = 0;
 	this.height = 0;
@@ -60,6 +60,14 @@ annotationModel.prototype.setOrigin = function(point) {
 	this.origin = point;
 };
 
+annotationModel.prototype.getCurrentOrigin = function() {
+	return this.currentOrigin;
+};
+
+annotationModel.prototype.getCurrentAnchor = function() {
+	return this.currentAnchor;
+};
+
 annotationModel.prototype.isCollision = function(annotation) {
 	return this.getRect().intersectsRect(annotation.getRect());
 };
@@ -90,8 +98,9 @@ annotationModel.prototype.pointerIntersectsAnnotation = function(annotation) {
 	return segment1.intersectsSegment(segment2);
 };
 
-annotationModel.prototype.drawTextAtPoint = function(point) {
+annotationModel.prototype.drawAtPoint = function(point, anchor) {
 	var ctx = this.canvas.getContext('2d');
+	ctx.save();
 	ctx.strokeStyle = this.color;
 	ctx.font = this.fontSize + "pt Helvetica";
 
@@ -99,26 +108,14 @@ annotationModel.prototype.drawTextAtPoint = function(point) {
 		var offset = this.lineSpacing * i + this.fontSize;
 		ctx.fillText(this.lines[i], point.x, point.y + i * this.fontSize + offset);
 	}
-	ctx.strokeRect(point.x, point.y, this.width, this.height);
-};
 
-annotationModel.prototype.drawPointerAtPoint = function(point) {
-	var ctx = this.canvas.getContext('2d');
-	ctx.strokeStyle = this.color;
-	ctx.font = this.fontSize + "pt Helvetica";
+	ctx.strokeRect(point.x, point.y, this.width, this.height);
+
 	ctx.beginPath();
 	ctx.moveTo(this.pointerStart.x, this.pointerStart.y);
-	ctx.lineTo(point.x, point.y);
+	ctx.lineTo(anchor.x, anchor.y);
 	ctx.stroke();
-}
 
-annotationModel.prototype.copy = function() {
-	var copy = new annotationModel(this.lines, this.canvas);
-	copy.color = this.color;
-	copy.width = this.width;
-	copy.height = this.height;
-	copy.anchor = this.anchor;
-	copy.pointerStart = this.pointerStart;
-	copy.origin = this.origin;
-	return copy;
+	this.currentOrigin = point;
+	this.currentAnchor = anchor;
 };

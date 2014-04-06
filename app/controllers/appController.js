@@ -16,7 +16,6 @@ appController.prototype.init = function() {
 	var characteristics = ['Nodule', 'Size', 'Iso', 'Mixed', 'Tirads', 'Wtf'];
 	var ids = [];
 	var thyroidController = new ThyroidController(canvas, function() {
-		thyroidController.enableAnnotations();
 		ids.push(thyroidController.addSphere({x: 0.525,
 			y: 0.7294685990338164,
 			z: 0.13015710382513662}, '#ff0000'));
@@ -36,6 +35,7 @@ appController.prototype.init = function() {
 		for (var i in ids) {
 			thyroidController.setAnnotation(ids[i], characteristics);
 		}
+		thyroidController.enableAnnotations();
 	});
 
 	// var div = document.createElement('div');
