@@ -13,7 +13,7 @@ appController.prototype.init = function() {
 	document.body.appendChild(canvas);
 	canvas.width = canvas.clientWidth;
 	canvas.height = canvas.clientHeight;
-	var characteristics = ['Nodule', 'Size', 'Iso', 'Mixed', 'Tirads', 'Wtf'];
+	var characteristics = ['Echostructure', 'Echogenicity', 'Border', 'Calcification', 'Vascularization', 'ADP'];
 	var ids = [];
 	var thyroidController = new ThyroidController(canvas, function() {
 		ids.push(thyroidController.addSphere({x: 0.525,

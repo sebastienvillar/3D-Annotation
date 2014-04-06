@@ -4,7 +4,7 @@ var Segment = require('segmentModel');
 var annotationModel = function(lines, canvas) {
 	this.canvas = canvas;
 	this.lines = null;
-	this.fontSize = 12;
+	this.fontSize = 10;
 	this.lineSpacing = 3;
 	this.color = '#000000';
 	this.pointerStart = {'x': 0, 'y': 0};
@@ -12,6 +12,7 @@ var annotationModel = function(lines, canvas) {
 	this.origin = {'x': 0, 'y': 0};
 
 	this.padding = 6;
+	this.currentAlpha = 0;
 
 	this.width = 0;
 	this.height = 0;
@@ -70,6 +71,7 @@ annotationModel.prototype.getCurrentAnchor = function() {
 	return this.currentAnchor;
 };
 
+
 annotationModel.prototype.isCollision = function(annotation) {
 	return this.getRect().intersectsRect(annotation.getRect());
 };
@@ -110,8 +112,6 @@ annotationModel.prototype.drawAtPoint = function(point, anchor) {
 		var offset = this.lineSpacing * i + this.fontSize;
 		ctx.fillText(this.lines[i], point.x + this.padding, point.y + this.padding + i * this.fontSize + offset);
 	}
-
-	//ctx.strokeRect(point.x, point.y, this.width, this.height);
 
 	ctx.beginPath();
 	ctx.moveTo(this.pointerStart.x, this.pointerStart.y);

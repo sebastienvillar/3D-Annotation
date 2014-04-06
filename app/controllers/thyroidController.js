@@ -279,11 +279,11 @@ thyroidController.prototype.updateAnnotations = function(needMove, animated) {
 
 		var point = Helper.screenPointForVector(projector.projectVector(this.spheresMap[id].position(), this.camera), this.canvas);
 
-		if (!this.animatingAnnotations)
-			this.annotationsOldInfo[id] = {'origin': annotation.getOrigin(), 'anchor': annotation.getAnchor()};
 		annotation.setPointerStart(point);
 	
 		if (needMove) {
+			this.annotationsOldInfo[id] = {'origin': annotation.getOrigin(),
+																		 'anchor': annotation.getAnchor()};
 			var angle = this.boundingCircle.angleForPoint(point);
 			var anchor = this.boundingCircle.intersectionForAngle(angle);
 			annotation.setAnchor(anchor);
@@ -292,15 +292,17 @@ thyroidController.prototype.updateAnnotations = function(needMove, animated) {
 	}
 
 	var annotationIdsOK;
+	var annotationIdsNotOK;
 	if (needMove) {
 		//Find annotations that collision and need to be moved
 		annotationIdsOK = [];
-		var annotationIdsNotOK = [];
+		annotationIdsNotOK = [];
 
 		for (var id in this.annotationsMap) {
+			var annotation = this.annotationsMap[id];
 			if (this.isCollisionForId(id, annotationIdsOK))
 				annotationIdsNotOK.push(id);
-			else
+			else 
 				annotationIdsOK.push(id);
 		}
 		//Move annotations if possible or don't show them
@@ -326,9 +328,10 @@ thyroidController.prototype.moveAnnotations = function(annotationIds, needMove, 
 		for (var i in annotationIds) {
 			var id = annotationIds[i];
 			var annotation = this.annotationsMap[id];
-			var oldInfo = this.annotationsOldInfo[id];
+			oldInfo = {};
 			oldInfo.anchor = annotation.getCurrentAnchor();
 			oldInfo.origin = annotation.getCurrentOrigin();
+			this.annotationsOldInfo[id] = oldInfo;
 		}
 	}
 
@@ -349,21 +352,22 @@ thyroidController.prototype.moveAnnotations = function(annotationIds, needMove, 
 	    if (!animated)
 	    	progress = 1;
 
-	    if (progress > 1) {
+	    if (progress > 1 || !animated) {
 	    	cancelAnimationFrame(this.frameAnimationId);
 	    	this.frameAnimationId = null;
 	    	this.animatingAnnotations = false;
-	    	return;
+	    	if (animated)
+	    		return;
 	    }
 
 	    ctx.clearRect(0, 0, this.drawingCanvas.width, this.drawingCanvas.height);
 
-			for (var i in annotationIds) {
-				var id = annotationIds[i];
-				var annotation = this.annotationsMap[id];
-				var oldInfo = this.annotationsOldInfo[id];
+	    for (var i in annotationIds) {
+	    	var id = annotationIds[i];
+	    	var annotation = this.annotationsMap[id];
+	    	var oldInfo = this.annotationsOldInfo[id];
 
-				//Compute origin
+	    	//Compute origin
 				var interOrigin = {'x': oldInfo.origin.x + (annotation.getOrigin().x - oldInfo.origin.x) * progress,
 													 'y': oldInfo.origin.y + (annotation.getOrigin().y - oldInfo.origin.y) * progress};
 
@@ -371,7 +375,7 @@ thyroidController.prototype.moveAnnotations = function(annotationIds, needMove, 
 				var interAnchor = {'x': oldInfo.anchor.x + (annotation.getAnchor().x - oldInfo.anchor.x) * progress,
 													 'y': oldInfo.anchor.y + (annotation.getAnchor().y - oldInfo.anchor.y) * progress};
 				annotation.drawAtPoint(interOrigin, interAnchor);
-			}
+	    }
 
 		}.bind(this);
 		this.frameAnimationId = requestAnimationFrame(loop);
@@ -380,7 +384,6 @@ thyroidController.prototype.moveAnnotations = function(annotationIds, needMove, 
 		for (var i in annotationIds) {
 			var id = annotationIds[i];
 			var annotation = this.annotationsMap[id];
-			var oldInfo = this.annotationsOldInfo[id];
 			annotation.drawAtPoint(annotation.origin, annotation.anchor);
 		}
 	}
@@ -414,5 +417,4 @@ thyroidController.prototype.enableAnnotations = function() {
 
 thyroidController.prototype.disableAnnotations = function() {
 	this.annotationsEnabled = false;
-	clearTimeout(this.needAnnotationRefreshTimeoutId);
 };

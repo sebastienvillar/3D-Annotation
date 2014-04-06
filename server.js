@@ -56,7 +56,6 @@ app.use(function (req, res) {
     });
   }
   else {
-    console.log('sent');
     res.writeHead(302, {
       'Location': '/'
     });
