@@ -393,8 +393,8 @@ thyroidController.prototype.moveAnnotations = function(annotationIds, needMove, 
 //Public
 ////////////////////////////////
 
-thyroidController.prototype.addSphere = function(ratios, color) {
-	var sphere = new SphereModel(this.scene, 0.8, color);
+thyroidController.prototype.addSphere = function(ratios, dimensions, color) {
+	var sphere = new SphereModel(this.scene, dimensions, color);
 	this.spheresMap[sphere.id] = sphere;
 	this.addObject3DToScene(sphere);
 
