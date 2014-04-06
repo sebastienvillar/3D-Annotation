@@ -11,6 +11,8 @@ var annotationModel = function(lines, canvas) {
 	this.anchor = {'x': 0, 'y': 0};
 	this.origin = {'x': 0, 'y': 0};
 
+	this.padding = 6;
+
 	this.width = 0;
 	this.height = 0;
 	this.setLines(lines);
@@ -27,12 +29,12 @@ annotationModel.prototype.computeWidth = function() {
 		var line = this.lines[i];
 		width = Math.max(width, ctx.measureText(line).width);
 	}
-	this.width = width;
+	this.width = width + this.padding * 2;
 };
 
 annotationModel.prototype.computeHeight = function() {
 	this.height = this.lines.length * this.fontSize + 
-							 (this.lines.length - 1) * this.lineSpacing;
+							 (this.lines.length - 1) * this.lineSpacing + this.padding * 2;
 };
 
 ////////////////////////////////
@@ -106,15 +108,16 @@ annotationModel.prototype.drawAtPoint = function(point, anchor) {
 
 	for (var i in this.lines) {
 		var offset = this.lineSpacing * i + this.fontSize;
-		ctx.fillText(this.lines[i], point.x, point.y + i * this.fontSize + offset);
+		ctx.fillText(this.lines[i], point.x + this.padding, point.y + this.padding + i * this.fontSize + offset);
 	}
 
-	ctx.strokeRect(point.x, point.y, this.width, this.height);
+	//ctx.strokeRect(point.x, point.y, this.width, this.height);
 
 	ctx.beginPath();
 	ctx.moveTo(this.pointerStart.x, this.pointerStart.y);
 	ctx.lineTo(anchor.x, anchor.y);
 	ctx.stroke();
+	ctx.restore();
 
 	this.currentOrigin = point;
 	this.currentAnchor = anchor;

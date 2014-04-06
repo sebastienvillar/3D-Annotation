@@ -5,6 +5,7 @@ var sphereModel = function(scene, radius, color) {
 	Object3DModel.call(this, scene);
 	this.scene = scene;
 	this.radius = radius;
+	this.color = color;
 	var material = new THREE.MeshPhongMaterial({ 
 		specular: 0xdddddd,
 		color: color,

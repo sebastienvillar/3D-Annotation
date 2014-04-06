@@ -86,7 +86,7 @@ thyroidController.prototype.render = function() {
 };
 
 thyroidController.prototype.startListening = function() {
-	var touch = Touch(this.canvas);
+	var touch = Touch(this.drawingCanvas);
 	touch.on('dragStart', this.onDragStart.bind(this));
 	touch.on('dragMove', this.onDragMove.bind(this));
 	touch.on('dragEnd', this.onDragEnd.bind(this));
@@ -111,17 +111,17 @@ thyroidController.prototype.onDragMove = function(e) {
   this.camera.position.z = Math.cos(angle) * distance;
   this.camera.lookAt(new THREE.Vector3(0, 0, 0));
   
-  var animated = false;
+  var needMove = false;
   if (this.draggingDistance > 75) {
   	this.draggingDistance = 0;
-  	animated = true;
+  	needMove = true;
   }
-  this.updateAnnotations(animated);
+  this.updateAnnotations(needMove, true);
   this.lastPoint = e.point;
 };
 
 thyroidController.prototype.onDragEnd = function(e) {
-	this.updateAnnotations(true);
+	this.updateAnnotations(true, true);
 };
 
 thyroidController.prototype.nextRenderDepth = function() {
@@ -265,7 +265,7 @@ thyroidController.prototype.computeBoundingCircle = function() {
 	this.boundingCircle.contract(22);
 };
 
-thyroidController.prototype.updateAnnotations = function(needMove) {
+thyroidController.prototype.updateAnnotations = function(needMove, animated) {
 	if (!this.annotationsEnabled)
 		return;
 
@@ -312,13 +312,13 @@ thyroidController.prototype.updateAnnotations = function(needMove) {
 	} else {
 		annotationIdsOK = Object.keys(this.annotationsMap);
 	}
-	this.moveAnnotations(annotationIdsOK, needMove);
+	this.moveAnnotations(annotationIdsOK, needMove, animated);
 };
 
-thyroidController.prototype.moveAnnotations = function(annotationIds, needMove) {
+thyroidController.prototype.moveAnnotations = function(annotationIds, needMove, animated) {
 	var ctx = this.drawingCanvas.getContext("2d");
 
-	if (needMove && this.animatingAnnotations) {
+	if (needMove && animated && this.animatingAnnotations) {
 		cancelAnimationFrame(this.frameAnimationId);
 		this.requestAnimationFrame = null;
 		this.animatingAnnotations = false;
@@ -345,6 +345,9 @@ thyroidController.prototype.moveAnnotations = function(annotationIds, needMove) 
 	    dt = now - (time || now);
 	    time = now;
 	    progress += dt / animationDuration;
+
+	    if (!animated)
+	    	progress = 1;
 
 	    if (progress > 1) {
 	    	cancelAnimationFrame(this.frameAnimationId);
@@ -406,7 +409,7 @@ thyroidController.prototype.setAnnotation = function(id, lines) {
 
 thyroidController.prototype.enableAnnotations = function() {
 	this.annotationsEnabled = true;
-	this.updateAnnotations(true);
+	this.updateAnnotations(true, false);
 };
 
 thyroidController.prototype.disableAnnotations = function() {
