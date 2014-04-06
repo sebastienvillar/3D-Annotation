@@ -47,7 +47,7 @@ var thyroidController = function(canvas, callback) {
 
 thyroidController.prototype.initScene = function(callback) {
 	this.renderer = new THREE.WebGLRenderer({canvas: this.canvas});
-	this.renderer.setClearColor(0xdddddd, 1);
+	this.renderer.setClearColor(0xffffff, 1);
 	this.renderer.autoClear = true;
 
 	this.scene = new THREE.Scene();
