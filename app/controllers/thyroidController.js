@@ -12,7 +12,7 @@ window.requestAnimationFrame = window.requestAnimationFrame ||
                                window.webkitRequestAnimationFrame || 
                                window.msRequestAnimationFrame;
 
-var thyroidController = function(canvas, callback) {
+var thyroidController = function(canvas, path, callback) {
 	this.canvas = canvas;
 	this.drawingCanvas = document.createElement('canvas');
 	this.drawingCanvas.width = this.canvas.width;
@@ -23,6 +23,7 @@ var thyroidController = function(canvas, callback) {
 	this.canvas.parentNode.appendChild(this.drawingCanvas);
 	this.renderDepthMap = {};
 	this.spheresMap = {};
+	this.path = path;
 
 	this.annotationsMap = {};
 	this.annotationsOldInfo = {};
@@ -68,7 +69,7 @@ thyroidController.prototype.initScene = function(callback) {
 	this.directionalLight2.position.set(-1, -1, -1);
 	this.scene.add(this.directionalLight2);
 
-	this.thyroid = new ThyroidModel(this.scene, function() {
+	this.thyroid = new ThyroidModel(this.scene, this.path, function() {
 		this.thyroid.setPosition(new THREE.Vector3(0, -3, 0));
 		this.addObject3DToScene(this.thyroid);
 		if (callback)
