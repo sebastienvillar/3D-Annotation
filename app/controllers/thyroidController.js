@@ -432,4 +432,5 @@ thyroidController.prototype.enableAnnotations = function() {
 
 thyroidController.prototype.disableAnnotations = function() {
 	this.annotationsEnabled = false;
+	this.updateAnnotations(true, false);
 };
