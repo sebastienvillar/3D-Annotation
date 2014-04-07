@@ -63,4 +63,6 @@ app.use(function (req, res) {
   }
 });
 
-http.createServer(app).listen(3000);
+var port = process.argv[2] || 3000;
+http.createServer(app).listen(port);
+console.log('Listening on port:' + port);
