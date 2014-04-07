@@ -12,8 +12,11 @@ appController.prototype.init = function() {
 	var canvas = document.createElement('canvas');
 	document.body.appendChild(canvas);
 	var characteristics = ['Echostructure', 'Echogenicity', 'Border', 'Calcification', 'Vascularization', 'ADP'];
-	var ids = [];
 	var thyroidController = new ThyroidController(canvas, '/app/json/thyroid.json', function() {
+		thyroidController.enableAnnotations();
+	});
+	function fill() {
+		var ids = [];
 		ids.push(thyroidController.addSphere({x: 0.525,
 			y: 0.4294685990338164,
 			z: 0.13015710382513662}, {'x': 0.9, 'y': 1.5, 'z': 1}, '#ff0000'));
@@ -29,12 +32,14 @@ appController.prototype.init = function() {
 		ids.push(thyroidController.addSphere({x: 0.6125,
 			y: 0.7246376811594203,
 			z: 0.5103142076502731}, {'x': 0.5, 'y': 0.5, 'z': 0.5}, '#000000'));
-
 		for (var i in ids) {
 			thyroidController.setAnnotation(ids[i], characteristics);
 		}
-		thyroidController.enableAnnotations();
-	});
+	}
+
+	setTimeout(fill, 2000);
+	setTimeout(thyroidController.clear.bind(thyroidController), 4000);
+	setTimeout(fill, 6000);
 
 	// var div = document.createElement('div');
 	// div.style.width = 800;

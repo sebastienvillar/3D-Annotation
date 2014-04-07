@@ -408,9 +408,20 @@ thyroidController.prototype.addSphere = function(ratios, dimensions, color) {
 	return sphere.id;
 };
 
+thyroidController.prototype.clear = function() {
+	for (var id in this.spheresMap) {
+		this.removeObject3DFromScene(this.spheresMap[id]);
+	}
+	this.spheresMap = {};
+	this.annotationsMap = {};
+	this.annotationsOldInfo = {};
+	this.updateAnnotations(true, false);
+}
+
 thyroidController.prototype.setAnnotation = function(id, lines) {
 	var annotation = new Annotation(lines, this.drawingCanvas);
 	this.annotationsMap[id] = annotation;
+	this.updateAnnotations(true, false);
 }
 
 thyroidController.prototype.enableAnnotations = function() {
