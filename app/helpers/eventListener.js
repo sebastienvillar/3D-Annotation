@@ -148,8 +148,10 @@ eventListener.prototype.mouseTouchCount = function() {
 eventListener.prototype.mouseTouches = function(e) {
 	var domOffset = this.domOffset();
 
-	var xIn = e.clientX > this.domElement.offsetLeft && e.clientX < this.domElement.offsetLeft + this.domElement.offsetWidth;
-	var yIn = e.clientY > this.domElement.offsetTop && e.clientY < this.domElement.offsetTop + this.domElement.offsetHeight;
+	var xIn = e.clientX > domOffset.x && e.clientX < domOffset.x+ this.domElement.offsetWidth;
+	var yIn = e.clientY > domOffset.y && e.clientY < domOffset.y + this.domElement.offsetHeight;
+
+
 
 	if (!xIn || ! yIn) 
 		return [];
