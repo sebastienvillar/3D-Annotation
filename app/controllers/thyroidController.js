@@ -14,6 +14,8 @@ window.requestAnimationFrame = window.requestAnimationFrame ||
 
 var thyroidController = function(canvas, path, callback) {
 	this.canvas = canvas;
+	this.canvas.width = canvas.clientWidth;
+	this.canvas.height = canvas.clientHeight;
 	this.drawingCanvas = document.createElement('canvas');
 	this.drawingCanvas.width = this.canvas.width;
 	this.drawingCanvas.height = this.canvas.height;

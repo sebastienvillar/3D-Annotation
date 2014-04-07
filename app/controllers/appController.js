@@ -11,8 +11,6 @@ var appController = function() {
 appController.prototype.init = function() {
 	var canvas = document.createElement('canvas');
 	document.body.appendChild(canvas);
-	canvas.width = canvas.clientWidth;
-	canvas.height = canvas.clientHeight;
 	var characteristics = ['Echostructure', 'Echogenicity', 'Border', 'Calcification', 'Vascularization', 'ADP'];
 	var ids = [];
 	var thyroidController = new ThyroidController(canvas, '/app/json/thyroid.json', function() {
