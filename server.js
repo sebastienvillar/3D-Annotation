@@ -40,10 +40,10 @@ var app = connect();
 app.use('/assets', Mincer.createServer(environment));
 app.use(function (req, res) {
   if (files.indexOf(req.url) != -1) {
-    sendFile("../client" + req.url, res);
+    sendFile("./" + req.url, res);
   }
   else if (req.url == '/') 
-    sendFile("../client/index.html", res);
+    sendFile("./index.html", res);
   else if ((result = req.url.match(/\/images\/(.*)/))) {
     var path = './app/images/' + result[1];
     fs.exists(path, function(exists) {
