@@ -20,9 +20,9 @@ var thyroidController = function(canvas, path, callback) {
 	this.drawingCanvas.width = this.canvas.width;
 	this.drawingCanvas.height = this.canvas.height;
 	this.drawingCanvas.style.position = 'absolute';
-	this.drawingCanvas.style.left = this.canvas.offsetLeft;
-	this.drawingCanvas.style.top = this.canvas.offsetTop;
-	this.canvas.parentNode.appendChild(this.drawingCanvas);
+	this.drawingCanvas.style.left = this.canvas.offsetLeft || 0;
+	this.drawingCanvas.style.top = this.canvas.offsetTop || 0;
+	this.canvas.parentNode.insertBefore(this.drawingCanvas, this.canvas);
 	this.renderDepthMap = {};
 	this.spheresMap = {};
 	this.path = path;
