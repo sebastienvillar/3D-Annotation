@@ -4,7 +4,7 @@ var connect = require('connect');
 var Mincer = require('mincer');
 
 var environment = new Mincer.Environment();
-environment.appendPath('../client/app');
+environment.appendPath('./app');
 
 var postProcessor = function (path, data) {
   this.path = path;
