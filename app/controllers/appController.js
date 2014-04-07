@@ -14,8 +14,6 @@ appController.prototype.init = function() {
 	var characteristics = ['Echostructure', 'Echogenicity', 'Border', 'Calcification', 'Vascularization', 'ADP'];
 	var thyroidController = new ThyroidController(canvas, '/app/json/thyroid.json', function() {
 		thyroidController.enableAnnotations();
-	});
-	function fill() {
 		var ids = [];
 		ids.push(thyroidController.addSphere({x: 0.525,
 			y: 0.4294685990338164,
@@ -35,11 +33,7 @@ appController.prototype.init = function() {
 		for (var i in ids) {
 			thyroidController.setAnnotation(ids[i], characteristics);
 		}
-	}
-
-	setTimeout(fill, 2000);
-	setTimeout(thyroidController.clear.bind(thyroidController), 4000);
-	setTimeout(fill, 6000);
+	});
 
 	// var div = document.createElement('div');
 	// div.style.width = 800;

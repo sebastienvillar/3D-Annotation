@@ -22,6 +22,7 @@ var thyroidController = function(canvas, path, callback) {
 	this.drawingCanvas.style.position = 'absolute';
 	this.drawingCanvas.style.left = this.canvas.offsetLeft || 0;
 	this.drawingCanvas.style.top = this.canvas.offsetTop || 0;
+	this.drawingCanvas.style['pointer-events'] = 'none';
 	this.canvas.parentNode.insertBefore(this.drawingCanvas, this.canvas);
 	this.renderDepthMap = {};
 	this.spheresMap = {};
@@ -89,7 +90,7 @@ thyroidController.prototype.render = function() {
 };
 
 thyroidController.prototype.startListening = function() {
-	var touch = Touch(this.drawingCanvas);
+	var touch = Touch(this.canvas);
 	touch.on('dragStart', this.onDragStart.bind(this));
 	touch.on('dragMove', this.onDragMove.bind(this));
 	touch.on('dragEnd', this.onDragEnd.bind(this));
