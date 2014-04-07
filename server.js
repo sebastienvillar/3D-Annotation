@@ -13,7 +13,8 @@ var postProcessor = function (path, data) {
 postProcessor.prototype.evaluate = function(context, locals) {
   if(this.path.match(/nomodule/))
     return this.data;
-  var pathArgs = this.path.split("/");
+  var pathArgs = this.path.split("/|\\");
+    console.log(pathArgs);
   var name = pathArgs[pathArgs.length - 1].replace(".js","");
   var data = 'this.require.define({ "'+name+'" : function(exports, require, module) {';
   data += this.data;
