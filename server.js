@@ -63,6 +63,6 @@ app.use(function (req, res) {
   }
 });
 
-var port = process.argv[2] || 3000;
+var port = process.env.PORT || process.argv[2] || 3000;
 http.createServer(app).listen(port);
 console.log('Listening on port:' + port);

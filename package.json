@@ -1,0 +1,12 @@
+{
+  "name": "Memoire-client-3D",
+  "version": "0.0.1",
+  "dependencies": {
+  	"connect": "~2.7.11",
+  	"mincer": "~0.5.0"
+  },
+  "engines": {
+    "node": "~0.8.22",
+    "npm": "1.2.x"
+  }
+}
